@@ -8,7 +8,7 @@ enum class ExitActivation { Simultaneous, AfterPrevious };
 
 enum class EntrySource { Signal, Call };
 
-enum class SignalTiming { CurrentClose, NextOpen };
+enum class PriceExitsStart { CurrentBar, NextBar };
 
 enum class PyramidingRetrigger { EveryEvaluation, AfterFalse };
 

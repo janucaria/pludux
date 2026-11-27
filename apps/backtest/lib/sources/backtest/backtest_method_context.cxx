@@ -172,7 +172,8 @@ public:
    std::size_t pyramiding_layer,
    const CallRow* calls = nullptr,
    SeriesEvaluationResults* call_cache = nullptr,
-   const ExternalAssetData* external_data = nullptr) noexcept
+   const ExternalAssetData* external_data = nullptr,
+   SeriesEvaluationResults* retrospective_cache = nullptr) noexcept
   : series_methods_{series_methods}
   , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
@@ -181,6 +182,7 @@ public:
   , calls_{calls}
   , call_cache_{call_cache}
   , external_data_{external_data}
+  , retrospective_cache_{retrospective_cache}
   {
   }
 
@@ -238,9 +240,10 @@ public:
                           const auto& method_key) noexcept
    -> std::vector<double>&
   {
-    auto& cache = self.calls_ && self.call_cache_
-                   ? *self.call_cache_
-                   : self.series_evaluation_results_;
+    auto& cache = self.retrospective_cache_ ? *self.retrospective_cache_
+                  : self.calls_ && self.call_cache_
+                    ? *self.call_cache_
+                    : self.series_evaluation_results_;
     const auto results_opt = cache.results(method_key);
     if(!results_opt.has_value()) {
       cache.results(method_key, {});
@@ -277,8 +280,12 @@ public:
                       const std::string& field,
                       AssetSnapshot snapshot) const noexcept -> double
   {
-    return external_data_
-            ? external_data_->value(reference, field, snapshot.datetime())
+    const auto visible_snapshot =
+     retrospective_cache_ && snapshot.index() == current_index_ ? snapshot[1]
+                                                                : snapshot;
+    return external_data_ && visible_snapshot.size() != 0
+            ? external_data_->value(
+               reference, field, visible_snapshot.datetime())
             : std::numeric_limits<double>::quiet_NaN();
   }
 
@@ -403,6 +410,7 @@ private:
   const CallRow* calls_;
   SeriesEvaluationResults* call_cache_;
   const ExternalAssetData* external_data_;
+  SeriesEvaluationResults* retrospective_cache_;
   bool* missing_call_ = nullptr;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};

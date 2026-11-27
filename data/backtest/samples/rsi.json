@@ -51,7 +51,8 @@
             }
           }
         },
-        "timing": "NEXT_OPEN"
+        "price": { "method": "MARKET_DATA.OPEN" },
+        "delay": 1
       },
       "exits": {
         "activation": "SIMULTANEOUS",
@@ -75,7 +76,8 @@
                 }
               }
             },
-            "timing": "NEXT_OPEN"
+            "price": { "method": "MARKET_DATA.OPEN" },
+            "delay": 1
           }
         ]
       },

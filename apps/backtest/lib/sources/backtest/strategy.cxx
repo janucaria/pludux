@@ -27,18 +27,53 @@ enum class StopTargetReferencePrice {
 
 class Strategy {
 public:
-  class Entry {
+  class SignalOrder {
   public:
-    Entry()
-    : Entry(FalseNode{}, SignalTiming::NextOpen)
+    SignalOrder(StrategyNode price = OpenNode{}, std::uint32_t delay = 1)
+    : price_{std::move(price)}
+    , delay_{delay}
     {
     }
 
+    auto operator==(const SignalOrder&) const noexcept -> bool = default;
+
+    auto price() const noexcept -> const StrategyNode&
+    {
+      return price_;
+    }
+
+    void price(StrategyNode value) noexcept
+    {
+      price_ = std::move(value);
+    }
+
+    auto delay() const noexcept -> std::uint32_t
+    {
+      return delay_;
+    }
+
+    void delay(std::uint32_t value) noexcept
+    {
+      delay_ = value;
+    }
+
+  private:
+    StrategyNode price_;
+    std::uint32_t delay_;
+  };
+
+  class Entry : public SignalOrder {
+  public:
+    Entry() = default;
+
     Entry(ErasedNode<BacktestMethodContext> signal,
-          SignalTiming timing = SignalTiming::NextOpen,
+          StrategyNode price = OpenNode{},
+          std::uint32_t delay = 1,
+          PriceExitsStart price_exits_start = PriceExitsStart::CurrentBar,
           EntrySource source = EntrySource::Signal)
-    : signal_{std::move(signal)}
-    , timing_{timing}
+    : SignalOrder{std::move(price), delay}
+    , signal_{std::move(signal)}
+    , price_exits_start_{price_exits_start}
     , source_{source}
     {
     }
@@ -57,14 +92,14 @@ public:
       self.signal_ = std::move(signal);
     }
 
-    auto timing(this const Entry& self) noexcept -> SignalTiming
+    auto price_exits_start() const noexcept -> PriceExitsStart
     {
-      return self.timing_;
+      return price_exits_start_;
     }
 
-    void timing(this Entry& self, SignalTiming timing) noexcept
+    void price_exits_start(PriceExitsStart value) noexcept
     {
-      self.timing_ = timing;
+      price_exits_start_ = value;
     }
 
     auto entry_source() const noexcept -> EntrySource
@@ -77,25 +112,21 @@ public:
     }
 
   private:
-    ErasedNode<BacktestMethodContext> signal_;
-    SignalTiming timing_;
-    EntrySource source_;
+    ErasedNode<BacktestMethodContext> signal_{FalseNode{}};
+    PriceExitsStart price_exits_start_{PriceExitsStart::CurrentBar};
+    EntrySource source_{EntrySource::Signal};
   };
 
-  class Exit {
+  class Exit : public SignalOrder {
   public:
-    Exit()
-    : Exit(false, FalseNode{}, SignalTiming::NextOpen)
-    {
-    }
-
-    Exit(bool enabled,
-         ErasedNode<BacktestMethodContext> signal,
-         SignalTiming timing = SignalTiming::NextOpen,
+    Exit(bool enabled = false,
+         StrategyNode signal = FalseNode{},
+         StrategyNode price = OpenNode{},
+         std::uint32_t delay = 1,
          double reduce = 1.0)
-    : enabled_{enabled}
+    : SignalOrder{std::move(price), delay}
+    , enabled_{enabled}
     , signal_{std::move(signal)}
-    , timing_{timing}
     , reduce_{reduce}
     {
     }
@@ -124,16 +155,6 @@ public:
       self.signal_ = std::move(signal);
     }
 
-    auto timing(this const Exit& self) noexcept -> SignalTiming
-    {
-      return self.timing_;
-    }
-
-    void timing(this Exit& self, SignalTiming timing) noexcept
-    {
-      self.timing_ = timing;
-    }
-
     auto reduce(this const Exit& self) noexcept -> double
     {
       return self.reduce_;
@@ -147,11 +168,10 @@ public:
   private:
     bool enabled_;
     ErasedNode<BacktestMethodContext> signal_;
-    SignalTiming timing_;
     double reduce_;
   };
 
-  class Pyramiding {
+  class Pyramiding : public SignalOrder {
   public:
     Pyramiding() = default;
 
@@ -167,16 +187,6 @@ public:
                 ErasedNode<BacktestMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
-    }
-
-    auto timing(this const Pyramiding& self) noexcept -> SignalTiming
-    {
-      return self.timing_;
-    }
-
-    void timing(this Pyramiding& self, SignalTiming timing) noexcept
-    {
-      self.timing_ = timing;
     }
 
     auto retrigger(this const Pyramiding& self) noexcept -> PyramidingRetrigger
@@ -237,7 +247,6 @@ public:
 
   private:
     ErasedNode<BacktestMethodContext> signal_{FalseNode{}};
-    SignalTiming timing_{SignalTiming::NextOpen};
     PyramidingRetrigger retrigger_{PyramidingRetrigger::EveryEvaluation};
     std::uint32_t cooldown_{};
     std::uint32_t max_layers_{1};

@@ -96,13 +96,25 @@
     "version"
   ],
   "$defs": {
-    "signalTiming": {
+    "legacySignalTiming": {
       "type": "string",
       "enum": [
         "CURRENT_CLOSE",
         "NEXT_OPEN"
       ],
       "title": "Signal Timing"
+    },
+    "signalPrice": {
+      "$ref": "#/$defs/seriesAsParameter",
+      "default": { "method": "MARKET_DATA.OPEN" },
+      "description": "Strategy price expression. Open and Close used directly fill at the corresponding candle event. Other results must be reached on the candle."
+    },
+    "signalDelay": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295,
+      "default": 1,
+      "description": "Number of real candles to look back on the same asset for the signal."
     },
     "pyramidingRetrigger": {
       "type": "string",
@@ -153,7 +165,20 @@
                   "description": "Boolean signal definition for this entry rule. It can be an inline signal object or a literal true/false value."
                 },
                 "timing": {
-                  "$ref": "#/$defs/signalTiming"
+                  "$ref": "#/$defs/legacySignalTiming",
+                  "deprecated": true,
+                  "description": "Legacy import field. Use price, delay, and priceExitsStart in new entries."
+                },
+                "price": {
+                  "$ref": "#/$defs/signalPrice"
+                },
+                "delay": {
+                  "$ref": "#/$defs/signalDelay"
+                },
+                "priceExitsStart": {
+                  "enum": ["CURRENT_BAR", "NEXT_BAR"],
+                  "default": "CURRENT_BAR",
+                  "description": "When stop losses, trailing stops, and take profits first become active for the position."
                 }
               },
               "title": "Entry",
@@ -174,7 +199,14 @@
                   "description": "Boolean signal definition for this pyramiding rule. It can be an inline signal object or a literal true/false value."
                 },
                 "timing": {
-                  "$ref": "#/$defs/signalTiming"
+                  "$ref": "#/$defs/legacySignalTiming",
+                  "deprecated": true
+                },
+                "price": {
+                  "$ref": "#/$defs/signalPrice"
+                },
+                "delay": {
+                  "$ref": "#/$defs/signalDelay"
                 },
                 "retrigger": {
                   "$ref": "#/$defs/pyramidingRetrigger"
@@ -218,7 +250,8 @@
               },
               "default": {
                 "signal": false,
-                "timing": "NEXT_OPEN",
+                "price": { "method": "MARKET_DATA.OPEN" },
+                "delay": 1,
                 "retrigger": "EVERY_EVALUATION",
                 "cooldown": 0,
                 "maxLayers": 1,
@@ -358,7 +391,14 @@
           "description": "Boolean signal definition for this exit rule."
         },
         "timing": {
-          "$ref": "#/$defs/signalTiming"
+          "$ref": "#/$defs/legacySignalTiming",
+          "deprecated": true
+        },
+        "price": {
+          "$ref": "#/$defs/signalPrice"
+        },
+        "delay": {
+          "$ref": "#/$defs/signalDelay"
         },
         "reduce": {
           "$ref": "#/$defs/exitReduce"
@@ -3872,7 +3912,8 @@
                 }
               }
             },
-            "timing": "NEXT_OPEN"
+            "price": { "method": "MARKET_DATA.OPEN" },
+            "delay": 1
           },
           "exits": {
             "activation": "SIMULTANEOUS",
@@ -3896,7 +3937,8 @@
                     }
                   }
                 },
-                "timing": "NEXT_OPEN"
+                "price": { "method": "MARKET_DATA.OPEN" },
+                "delay": 1
               }
             ]
           },

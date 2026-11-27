@@ -8,6 +8,8 @@ import pludux.backtest;
 using namespace pludux;
 using namespace pludux::backtest;
 
+using SignalOrder = BacktestRunner::PositionRule::SignalOrder;
+
 namespace {
 
 auto make_filter_test_asset() -> Asset
@@ -27,7 +29,7 @@ auto make_filter_test_rule() -> BacktestRunner::PositionRule
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(true,
                             EqualMethod{CloseMethod{}, ValueMethod{120.0}},
-                            SignalTiming::CurrentClose,
+                            SignalOrder{CloseMethod{}, 0},
                             1.0);
   return BacktestRunner::PositionRule{BooleanMethod<true>{},
                                       std::move(signal_exits),
@@ -36,8 +38,8 @@ auto make_filter_test_rule() -> BacktestRunner::PositionRule
                                       0,
                                       ValueMethod{10.0},
                                       {},
-                                      SignalTiming::CurrentClose,
-                                      SignalTiming::CurrentClose};
+                                      SignalOrder{CloseMethod{}, 0},
+                                      SignalOrder{CloseMethod{}, 0}};
 }
 
 auto run_with_filter(ErasedSeriesMethod<EntryFilterMethodContext> entry_filter,

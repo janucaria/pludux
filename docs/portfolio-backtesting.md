@@ -69,11 +69,11 @@ Sizing methods express different limits:
 
 ## Shared-Capital Arbitration
 
-At a market timestamp, risk-reducing work is processed before risk-increasing
-work. Entry and pyramiding Requested Orders that occur in the same phase are
-ranked by the Portfolio's ordered comparators. Complete ties resolve by the
-Portfolio's ordered System list, then that System's Watchlist Asset order.
-Separate Portfolios do not arbitrate with one another.
+At each execution point, the Portfolio processes existing exits before fresh
+orders. Entry and pyramiding Requested Orders at the same point are ranked by
+the Portfolio's ordered comparators. Complete ties resolve by the Portfolio's
+ordered System list, then that System's Watchlist Asset order. Separate
+Portfolios do not arbitrate with one another.
 
 For a fresh initial entry, Pludux processes the request in this order.
 
@@ -120,10 +120,11 @@ Strategy Performance may already affect Bayesian or Kelly position sizing. Using
 it again in a comparator is valid, but can intentionally or accidentally give
 the same performance evidence additional influence over capital allocation.
 
-Asset data is phase-safe. A Current Close order sees the completed current bar.
-A Next Open or Call order sees the previous completed bar, because the current
-bar's high, low, close, and volume do not yet exist. Use Requested Order Price
-when a comparison needs the executable open price.
+At the close, a comparator can read the completed current candle. At the open
+or an intrabar touch, it reads the previous completed candle. Use Requested
+Order Price to compare executable fill prices at any point. Custom signal
+orders have their own rules for reading the execution candle.
+[Signal prices and delays](execution.md#signal-prices-and-delays)
 
 A direction-adjusted strength comparator can rank historical price movement in
 units of the order's risk distance:
@@ -157,20 +158,26 @@ which rejects every initial entry and can be useful for programmatic scenarios.
 
 ## Synchronized Execution
 
-For every timestamp, Pludux executes these phases:
+For every timestamp, Pludux executes these phases.
 
 1. Apply open-price exits for every backtest with a real bar.
-2. Process open-price entries and pyramids in Portfolio order.
-3. Apply the Portfolio's [Intrabar Path](execution.md#intrabar-path) and process
-   price exits for each active backtest.
-4. Apply close-price signal exits for every active backtest.
-5. Process close-price entries and pyramids in Portfolio order.
-6. Schedule next-open actions for each backtest's next real bar.
+2. Rank and process open-price entries and pyramids, including custom prices
+   first touched at the open.
+3. Advance through the Portfolio's Intrabar Path, processing protective exits
+   and custom entries, signal exits, and pyramids at their modeled touches.
+4. Apply close-price signal exits.
+5. Rank and process close-price entries and pyramids.
+6. Record completed signal results for later real candles on each Asset.
 7. Mark all positions to market and append the Portfolio result.
 
-Capital released by an exit is available to later entry phases at the same
-timestamp. A pending next-open action waits for that backtest's next real bar,
-not merely the next timestamp produced by another asset.
+With intrabar signal prices, Pludux aligns corresponding legs of each Asset's
+modeled path and orders events by progress along each leg. At each point it
+settles exits, ranks simultaneous entry and pyramid requests, then starts any
+Current Bar protective orders from their fills. This provides an execution
+order for candles that lack intrabar timestamps. [Intrabar Path](execution.md#intrabar-path)
+
+Capital released by an exit is available to later entries at the same
+timestamp. Signal delays count real candles on the backtest's own Asset.
 
 ## Union Timeline and Missing Bars
 

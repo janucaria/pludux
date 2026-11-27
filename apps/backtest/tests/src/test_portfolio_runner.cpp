@@ -13,6 +13,8 @@ import pludux.backtest;
 using namespace pludux;
 using namespace pludux::backtest;
 
+using SignalOrder = BacktestRunner::PositionRule::SignalOrder;
+
 auto make_asset(std::string name, std::vector<double> timestamps) -> Asset
 {
   const auto size = timestamps.size();
@@ -61,6 +63,43 @@ auto make_runner(const Asset& asset,
                         1'000.0};
 }
 
+namespace {
+
+auto make_price_entry_runner(
+ const Asset& asset,
+ StrategyMethod signal,
+ StrategyMethod price,
+ unsigned delay,
+ PriceExitsStart exits_start,
+ std::vector<BacktestRunner::PositionRule::StopLossRule> stops = {},
+ std::vector<BacktestRunner::PositionRule::TakeProfitRule> targets = {})
+ -> BacktestRunner
+{
+  static const auto market = Market{"Market", 0.0, 0.0};
+  static const auto broker = Broker{"Broker"};
+  auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  profile.insufficient_cash_policy(InsufficientCashPolicy::Reject);
+  auto rule =
+   BacktestRunner::PositionRule{std::move(signal),
+                                {},
+                                BooleanMethod<false>{},
+                                1,
+                                0,
+                                ValueMethod{10.0},
+                                std::move(stops),
+                                SignalOrder{OpenMethod{}, 1},
+                                SignalOrder{OpenMethod{}, 1},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                std::move(targets)};
+  rule.configure_entry(std::move(price), delay, exits_start);
+  return BacktestRunner{
+   asset, market, broker, profile, {}, std::move(rule), {}};
+}
+
+} // namespace
+
 auto make_entry_runner(const Asset& asset,
                        const Market& market,
                        const Broker& broker,
@@ -71,14 +110,15 @@ auto make_entry_runner(const Asset& asset,
 {
   auto configured_profile = profile;
   configured_profile.insufficient_cash_policy(cash_policy);
-  auto long_position = BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                                    {},
-                                                    BooleanMethod<false>{},
-                                                    0,
-                                                    0,
-                                                    ValueMethod{10.0},
-                                                    {},
-                                                    SignalTiming::CurrentClose};
+  auto long_position =
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                0,
+                                0,
+                                ValueMethod{10.0},
+                                {},
+                                SignalOrder{CloseMethod{}, 0}};
   return BacktestRunner{asset,
                         market,
                         broker,
@@ -108,7 +148,7 @@ auto make_short_entry_runner(const Asset& asset,
                                 0,
                                 ValueMethod{10.0},
                                 {},
-                                SignalTiming::CurrentClose};
+                                SignalOrder{CloseMethod{}, 0}};
   return BacktestRunner{asset,
                         market,
                         broker,
@@ -130,17 +170,17 @@ auto make_performance_history_runner(
  std::size_t maximum_layers = 1) -> BacktestRunner
 {
   auto signal_exits = std::vector<BacktestRunner::PositionRule::SignalExitRule>{
-   {true, std::move(exit), SignalTiming::CurrentClose}};
-  auto long_position = BacktestRunner::PositionRule{
-   std::move(entry),
-   std::move(signal_exits),
-   std::move(pyramid),
-   maximum_layers,
-   0,
-   ValueMethod{10.0},
-   {},
-   SignalTiming::CurrentClose,
-   SignalTiming::CurrentClose};
+   {true, std::move(exit), SignalOrder{CloseMethod{}, 0}}};
+  auto long_position =
+   BacktestRunner::PositionRule{std::move(entry),
+                                std::move(signal_exits),
+                                std::move(pyramid),
+                                maximum_layers,
+                                0,
+                                ValueMethod{10.0},
+                                {},
+                                SignalOrder{CloseMethod{}, 0},
+                                SignalOrder{CloseMethod{}, 0}};
   return BacktestRunner{asset,
                         market,
                         broker,
@@ -210,9 +250,8 @@ TEST(PortfolioRunnerTest, ExternalAssetUsesVisibleCandleWithoutAddingTimestamps)
   const auto broker = Broker{"Broker"};
   const auto profile =
    Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
-  for(const auto timing :
-      {SignalTiming::CurrentClose, SignalTiming::NextOpen}) {
-    SCOPED_TRACE(static_cast<int>(timing));
+  for(const auto use_close_price : {true, false}) {
+    SCOPED_TRACE(use_close_price);
     auto conversion = NodeToErasedMethodContext{};
     const auto entry = node_to_erased_method<BacktestMethodContext>(
      GreaterThanNode<BacktestMethodContext>{SeriesNode{"market_close"},
@@ -236,7 +275,8 @@ TEST(PortfolioRunnerTest, ExternalAssetUsesVisibleCandleWithoutAddingTimestamps)
      0,
      StrategyMethod{ExternFieldNode{"market", "risk_points"}},
      {},
-     timing};
+     use_close_price ? SignalOrder{CloseMethod{}, 0}
+                     : SignalOrder{OpenMethod{}, 1}};
     auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
     setups.emplace_back(
      std::move(series), std::move(position), BacktestRunner::PositionRule{});
@@ -263,13 +303,12 @@ TEST(PortfolioRunnerTest, ExternalAssetUsesVisibleCandleWithoutAddingTimestamps)
     ASSERT_EQ(results.backtests().size(), 1U);
     const auto& backtest = results.backtests().front();
     const auto& timeline = backtest.timeline();
-    const auto fill = timing == SignalTiming::CurrentClose ? 2U : 3U;
+    const auto fill = use_close_price ? 2U : 3U;
     ASSERT_EQ(results.events().size(), 1U);
     EXPECT_EQ(results.events().front().bar_index, fill);
     const auto opened = timeline.open_position(fill);
     ASSERT_TRUE(opened);
-    EXPECT_DOUBLE_EQ(opened->entry_price(),
-                     timing == SignalTiming::CurrentClose ? 108 : 105);
+    EXPECT_DOUBLE_EQ(opened->entry_price(), use_close_price ? 108 : 105);
     EXPECT_DOUBLE_EQ(opened->risk_distance(), 12);
     const auto values =
      backtest.series_results(0).results(std::string{"market_close"});
@@ -631,8 +670,8 @@ TEST(PortfolioRunnerTest, IntrabarPathControlsActualAndHypotheticalExits)
                                 0,
                                 ValueMethod{5.0},
                                 {{ValueMethod{95.0}, true}},
-                                SignalTiming::CurrentClose,
-                                SignalTiming::NextOpen,
+                                SignalOrder{CloseMethod{}, 0},
+                                SignalOrder{OpenMethod{}, 1},
                                 StopTargetReferencePrice::AveragePrice,
                                 StopTargetReferencePrice::AveragePrice,
                                 {{ValueMethod{105.0}, true}}};
@@ -713,6 +752,397 @@ TEST(PortfolioRunnerTest, IntrabarPathControlsActualAndHypotheticalExits)
       }
     }
   }
+}
+
+TEST(PortfolioRunnerTest, CustomEntryUsesExactAssetBarDelayAndExecutionPrice)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 3.0, 7.0}},
+                                        {"Open", {80.0, 114.0, 105.0}},
+                                        {"High", {82.0, 121.0, 109.0}},
+                                        {"Low", {78.0, 110.0, 95.0}},
+                                        {"Close", {80.0, 120.0, 100.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto interleaved = make_asset("Interleaved", {2.0, 4.0, 6.0, 9.0});
+  const auto signal = EqualMethod{CloseMethod{}, ValueMethod{80.0}};
+  const auto price =
+   StrategyMethod{MultiplyMethod{CloseMethod{}, ValueMethod{0.95}}};
+  auto runner =
+   PortfolioRunner{1'000.0,
+                   10,
+                   10,
+                   {{SystemStoreHandle{1, 1},
+                     AssetStoreHandle{1, 1},
+                     make_price_entry_runner(
+                      asset, signal, price, 2, PriceExitsStart::CurrentBar)},
+                    {SystemStoreHandle{1, 1},
+                     AssetStoreHandle{2, 1},
+                     make_price_entry_runner(interleaved,
+                                             BooleanMethod<false>{},
+                                             OpenMethod{},
+                                             1,
+                                             PriceExitsStart::CurrentBar)}}};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 7), 7U);
+  const auto& timeline = results.backtests().front().timeline();
+  EXPECT_TRUE(timeline.trade_events(0).empty());
+  EXPECT_TRUE(timeline.trade_events(1).empty());
+  const auto& events = timeline.trade_events(2);
+  ASSERT_EQ(events.size(), 1U);
+  EXPECT_EQ(events.front().type(), TradeEvent::Type::entry);
+  EXPECT_DOUBLE_EQ(events.front().price(), 95.0);
+  EXPECT_EQ(events.front().timestamp(), 7);
+}
+
+TEST(PortfolioRunnerTest, ZeroDelayPriceStartsProtectionAfterFillOrNextOpen)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 4.0}},
+                                        {"Open", {100.0, 90.0}},
+                                        {"High", {110.0, 94.0}},
+                                        {"Low", {90.0, 90.0}},
+                                        {"Close", {100.0, 94.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto interleaved = make_asset("Interleaved", {2.0, 3.0});
+  const auto signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
+  const auto price =
+   StrategyMethod{MultiplyMethod{CloseMethod{}, ValueMethod{0.95}}};
+  for(const auto mode :
+      {PriceExitsStart::CurrentBar, PriceExitsStart::NextBar}) {
+    SCOPED_TRACE(static_cast<int>(mode));
+    auto runner =
+     PortfolioRunner{1'000.0,
+                     10,
+                     10,
+                     {{SystemStoreHandle{1, 1},
+                       AssetStoreHandle{1, 1},
+                       make_price_entry_runner(asset,
+                                               signal,
+                                               price,
+                                               0,
+                                               mode,
+                                               {{ValueMethod{92.0}, true}},
+                                               {{ValueMethod{108.0}, true}})},
+                      {SystemStoreHandle{1, 1},
+                       AssetStoreHandle{2, 1},
+                       make_price_entry_runner(interleaved,
+                                               BooleanMethod<false>{},
+                                               OpenMethod{},
+                                               1,
+                                               PriceExitsStart::CurrentBar)}},
+                     {},
+                     IntrabarPath::HighFirst};
+    auto results = PortfolioResults{};
+
+    ASSERT_EQ(runner.run_batch(results, 4), 4U);
+    const auto& timeline = results.backtests().front().timeline();
+    const auto& first_events = timeline.trade_events(0);
+    ASSERT_FALSE(first_events.empty());
+    EXPECT_EQ(first_events.front().type(), TradeEvent::Type::entry);
+    EXPECT_DOUBLE_EQ(first_events.front().price(), 95.0);
+    const auto current_bar = mode == PriceExitsStart::CurrentBar;
+    EXPECT_EQ(first_events.size(), current_bar ? 2U : 1U);
+    EXPECT_EQ(timeline.open_position(0).has_value(), !current_bar);
+    const auto exit_bar = current_bar ? 0U : 1U;
+    const auto exit_price = current_bar ? 92.0 : 90.0;
+    const auto& actual = timeline.closed_trades(exit_bar);
+    ASSERT_EQ(actual.size(), 1U);
+    EXPECT_EQ(actual.front().exit_type(), TradeEvent::Type::stop_loss);
+    EXPECT_DOUBLE_EQ(actual.front().entry_price(), 95.0);
+    EXPECT_DOUBLE_EQ(actual.front().exit_price(), exit_price);
+    const auto& hypothetical =
+     timeline.strategy_state(exit_bar, 0).strategy_closed_positions;
+    ASSERT_EQ(hypothetical.size(), 1U);
+    const auto& intents = hypothetical.front().intents();
+    ASSERT_EQ(intents.size(), 2U);
+    EXPECT_DOUBLE_EQ(intents.front().price(), 95.0);
+    EXPECT_EQ(intents.back().type(), StrategyIntentType::StopLoss);
+    EXPECT_DOUBLE_EQ(intents.back().price(), exit_price);
+  }
+}
+
+TEST(PortfolioRunnerTest, UntouchedCustomPriceExpiresOnItsExecutionCandle)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 100.0}},
+                                        {"High", {102.0, 102.0}},
+                                        {"Low", {98.0, 90.0}},
+                                        {"Close", {100.0, 101.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   10,
+   {{SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_price_entry_runner(asset,
+                             EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                             StrategyMethod{ValueMethod{95.0}},
+                             0,
+                             PriceExitsStart::CurrentBar)}}};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 2), 2U);
+  const auto& timeline = results.backtests().front().timeline();
+  EXPECT_TRUE(timeline.trade_events(0).empty());
+  EXPECT_TRUE(timeline.trade_events(1).empty());
+  EXPECT_FALSE(timeline.open_position(1));
+}
+
+TEST(PortfolioRunnerTest, DeferredTrailingStopDoesNotRatchetOnEntryBar)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 101.0}},
+                                        {"High", {110.0, 101.0}},
+                                        {"Low", {94.0, 101.0}},
+                                        {"Close", {107.0, 101.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  for(const auto mode :
+      {PriceExitsStart::CurrentBar, PriceExitsStart::NextBar}) {
+    SCOPED_TRACE(static_cast<int>(mode));
+    auto runner = PortfolioRunner{
+     1'000.0,
+     10,
+     10,
+     {{SystemStoreHandle{1, 1},
+       AssetStoreHandle{1, 1},
+       make_price_entry_runner(asset,
+                               EqualMethod{CloseMethod{}, ValueMethod{107.0}},
+                               StrategyMethod{ValueMethod{95.0}},
+                               0,
+                               mode,
+                               {{ValueMethod{90.0}, true, true}})}},
+     {},
+     IntrabarPath::LowFirst};
+    auto results = PortfolioResults{};
+
+    ASSERT_EQ(runner.run_batch(results, 2), 2U);
+    const auto& timeline = results.backtests().front().timeline();
+    ASSERT_TRUE(timeline.open_position(0));
+    const auto& stops = timeline.open_position(0)->stop_loss_levels();
+    ASSERT_EQ(stops.size(), 1U);
+    const auto current_bar = mode == PriceExitsStart::CurrentBar;
+    EXPECT_DOUBLE_EQ(stops.front().effective_price(),
+                     current_bar ? 105.0 : 90.0);
+    if(current_bar) {
+      const auto& exits = timeline.closed_trades(1);
+      ASSERT_EQ(exits.size(), 1U);
+      EXPECT_DOUBLE_EQ(exits.front().exit_price(), 101.0);
+    } else {
+      EXPECT_TRUE(timeline.open_position(1));
+      EXPECT_TRUE(timeline.closed_trades(1).empty());
+    }
+  }
+}
+
+TEST(PortfolioRunnerTest, EarlierIntrabarTouchHasFirstClaimOnSharedCash)
+{
+  const auto history = AssetHistory{{"Datetime", {1.0}},
+                                    {"Open", {100.0}},
+                                    {"High", {110.0}},
+                                    {"Low", {80.0}},
+                                    {"Close", {100.0}},
+                                    {"Volume", {0.0}}};
+  const auto later = Asset{"Later touch", history};
+  const auto earlier = Asset{"Earlier touch", history};
+  auto runner =
+   PortfolioRunner{100.0,
+                   10,
+                   10,
+                   {{SystemStoreHandle{1, 1},
+                     AssetStoreHandle{1, 1},
+                     make_price_entry_runner(later,
+                                             BooleanMethod<true>{},
+                                             StrategyMethod{ValueMethod{83.0}},
+                                             0,
+                                             PriceExitsStart::CurrentBar)},
+                    {SystemStoreHandle{1, 1},
+                     AssetStoreHandle{2, 1},
+                     make_price_entry_runner(earlier,
+                                             BooleanMethod<true>{},
+                                             StrategyMethod{ValueMethod{95.0}},
+                                             0,
+                                             PriceExitsStart::CurrentBar)}},
+                   {},
+                   IntrabarPath::LowFirst};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 1), 1U);
+  const auto& later_timeline = results.backtests()[0].timeline();
+  const auto& earlier_timeline = results.backtests()[1].timeline();
+  EXPECT_FALSE(later_timeline.open_position(0));
+  ASSERT_EQ(later_timeline.trade_events(0).size(), 1U);
+  EXPECT_EQ(later_timeline.trade_events(0).front().type(),
+            TradeEvent::Type::rejected_insufficient_cash);
+  ASSERT_TRUE(earlier_timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(earlier_timeline.open_position(0)->entry_price(), 95.0);
+}
+
+TEST(PortfolioRunnerTest, SignalExitAndPyramidUseCustomPriceAfterExactDelay)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 3.0, 6.0, 9.0}},
+                                        {"Open", {100.0, 101.0, 110.0, 118.0}},
+                                        {"High", {100.0, 105.0, 115.0, 124.0}},
+                                        {"Low", {100.0, 100.0, 105.0, 112.0}},
+                                        {"Close", {100.0, 102.0, 110.0, 120.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto entry = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
+  const auto signal = EqualMethod{CloseMethod{}, ValueMethod{102.0}};
+  const auto order =
+   SignalOrder{MultiplyMethod{CloseMethod{}, ValueMethod{0.95}}, 2};
+  const auto with_exit = BacktestRunner::PositionRule{entry,
+                                                      {{true, signal, order}},
+                                                      BooleanMethod<false>{},
+                                                      1,
+                                                      0,
+                                                      ValueMethod{10.0},
+                                                      {}};
+  const auto with_pyramid =
+   BacktestRunner::PositionRule{entry,
+                                {},
+                                signal,
+                                2,
+                                0,
+                                ValueMethod{10.0},
+                                {},
+                                SignalOrder{CloseMethod{}, 0},
+                                order};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   10,
+   {{SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     BacktestRunner{asset, market, broker, profile, {}, with_exit, {}}},
+    {SystemStoreHandle{2, 1},
+     AssetStoreHandle{1, 1},
+     BacktestRunner{asset, market, broker, profile, {}, with_pyramid, {}}}}};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 4), 4U);
+  const auto& exit_timeline = results.backtests()[0].timeline();
+  const auto& pyramid_timeline = results.backtests()[1].timeline();
+  for(const auto* timeline : {&exit_timeline, &pyramid_timeline}) {
+    ASSERT_TRUE(timeline->open_position(0));
+    EXPECT_TRUE(timeline->trade_events(1).empty());
+    EXPECT_TRUE(timeline->trade_events(2).empty());
+    ASSERT_EQ(timeline->trade_events(3).size(), 1U);
+    EXPECT_DOUBLE_EQ(timeline->trade_events(3).front().price(), 114.0);
+  }
+  EXPECT_EQ(exit_timeline.trade_events(3).front().type(),
+            TradeEvent::Type::exit_signal);
+  EXPECT_FALSE(exit_timeline.open_position(3));
+  EXPECT_EQ(pyramid_timeline.trade_events(3).front().type(),
+            TradeEvent::Type::scale_in);
+  ASSERT_TRUE(pyramid_timeline.open_position(3));
+  EXPECT_DOUBLE_EQ(pyramid_timeline.open_position(3)->position_size(), 2.0);
+}
+
+TEST(PortfolioRunnerTest, SameCandleSignalExitUsesOnlyTouchesAfterEntry)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0}},
+                                        {"Open", {100.0}},
+                                        {"High", {110.0}},
+                                        {"Low", {90.0}},
+                                        {"Close", {100.0}},
+                                        {"Volume", {0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto has_long_position =
+   EqualMethod{PositionDirectionMethod{}, ValueMethod{1.0}};
+  const auto rule = BacktestRunner::PositionRule{
+   BooleanMethod<true>{},
+   {{true, has_long_position, SignalOrder{ValueMethod{108.0}, 0}},
+    {true, has_long_position, SignalOrder{ValueMethod{92.0}, 0}}},
+   BooleanMethod<false>{},
+   1,
+   0,
+   ValueMethod{10.0},
+   {},
+   SignalOrder{ValueMethod{95.0}, 0}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   10,
+   {{SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     BacktestRunner{asset, market, broker, profile, {}, rule, {}}}},
+   {},
+   IntrabarPath::HighFirst};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 1), 1U);
+  const auto& timeline = results.backtests().front().timeline();
+  const auto& events = timeline.trade_events(0);
+  ASSERT_EQ(events.size(), 2U);
+  EXPECT_EQ(events[0].type(), TradeEvent::Type::entry);
+  EXPECT_DOUBLE_EQ(events[0].price(), 95.0);
+  EXPECT_EQ(events[1].type(), TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(events[1].price(), 92.0);
+  EXPECT_FALSE(timeline.open_position(0));
+}
+
+TEST(PortfolioRunnerTest, OrderedCustomExitUsesNextTouchAfterPredecessor)
+{
+  const auto asset = Asset{"Signal asset",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {99.0, 100.0}},
+                                        {"High", {99.0, 110.0}},
+                                        {"Low", {99.0, 90.0}},
+                                        {"Close", {99.0, 100.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{2.0}}};
+  const auto rule = BacktestRunner::PositionRule{
+   EqualMethod{CloseMethod{}, ValueMethod{99.0}},
+   {{true, BooleanMethod<true>{}, SignalOrder{ValueMethod{105.0}, 1}, 0.5},
+    {true, BooleanMethod<true>{}, SignalOrder{ValueMethod{102.0}, 1}}},
+   BooleanMethod<false>{},
+   1,
+   0,
+   ValueMethod{10.0},
+   {},
+   SignalOrder{CloseMethod{}, 0},
+   SignalOrder{},
+   StopTargetReferencePrice::AveragePrice,
+   StopTargetReferencePrice::AveragePrice,
+   {},
+   ExitActivation::AfterPrevious};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   10,
+   {{SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     BacktestRunner{asset, market, broker, profile, {}, rule, {}}}},
+   {},
+   IntrabarPath::LowFirst};
+  auto results = PortfolioResults{};
+
+  ASSERT_EQ(runner.run_batch(results, 2), 2U);
+  const auto& timeline = results.backtests().front().timeline();
+  ASSERT_TRUE(timeline.open_position(0));
+  const auto& events = timeline.trade_events(1);
+  ASSERT_EQ(events.size(), 2U);
+  EXPECT_EQ(events[0].type(), TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(events[0].price(), 105.0);
+  EXPECT_DOUBLE_EQ(events[0].position_size_after(), 1.0);
+  EXPECT_EQ(events[1].type(), TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(events[1].price(), 102.0);
+  EXPECT_FALSE(timeline.open_position(1));
 }
 
 TEST(PortfolioRunnerTest, IntrabarPathControlsSameCandleTrailingStop)
@@ -1105,21 +1535,22 @@ TEST(PortfolioRunnerTest, NextOpenComparatorUsesPreviousCompletedAssetBar)
   const auto profile =
    Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   const auto make_next_open_runner = [&](const Asset& asset) {
-    return BacktestRunner{asset,
-                          market,
-                          broker,
-                          profile,
-                          {},
-                          BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                                       {},
-                                                       BooleanMethod<false>{},
-                                                       0,
-                                                       0,
-                                                       ValueMethod{10.0},
-                                                       {},
-                                                       SignalTiming::NextOpen},
-                          BacktestRunner::PositionRule{},
-                          1'000.0};
+    return BacktestRunner{
+     asset,
+     market,
+     broker,
+     profile,
+     {},
+     BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                  {},
+                                  BooleanMethod<false>{},
+                                  0,
+                                  0,
+                                  ValueMethod{10.0},
+                                  {},
+                                  SignalOrder{OpenMethod{}, 1}},
+     BacktestRunner::PositionRule{},
+     1'000.0};
   };
   auto runner = PortfolioRunner{
    1'000.0,
@@ -1298,7 +1729,7 @@ TEST(PortfolioRunnerTest, ClosingTradeReleasesSlotAtSameTimestamp)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 1.0);
   auto exiting_runner =
    BacktestRunner{exiting,
                   market,
@@ -1372,8 +1803,8 @@ TEST(PortfolioRunnerTest, PyramidingRemainsAllowedAtOpenTradeLimit)
                                                0,
                                                ValueMethod{10.0},
                                                {},
-                                               SignalTiming::CurrentClose,
-                                               SignalTiming::CurrentClose},
+                                               SignalOrder{CloseMethod{}, 0},
+                                               SignalOrder{CloseMethod{}, 0}},
                   BacktestRunner::PositionRule{},
                   1'000.0};
   auto runner = PortfolioRunner{
@@ -1430,8 +1861,8 @@ TEST(PortfolioRunnerTest, ComparatorRanksPyramidingOrders)
                                   0,
                                   ValueMethod{10.0},
                                   {},
-                                  SignalTiming::CurrentClose,
-                                  SignalTiming::CurrentClose},
+                                  SignalOrder{CloseMethod{}, 0},
+                                  SignalOrder{CloseMethod{}, 0}},
      BacktestRunner::PositionRule{},
      1'000.0};
   };
@@ -1533,8 +1964,8 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
                                 0,
                                 ValueMethod{10.0},
                                 std::move(stop_losses),
-                                SignalTiming::CurrentClose,
-                                SignalTiming::CurrentClose,
+                                SignalOrder{CloseMethod{}, 0},
+                                SignalOrder{CloseMethod{}, 0},
                                 StopTargetReferencePrice::LatestEntryPrice,
                                 StopTargetReferencePrice::LatestEntryPrice},
    BacktestRunner::PositionRule{},
@@ -1610,7 +2041,7 @@ TEST(PortfolioRunnerTest, FullClosureReleasesCombinedLayerAtSameTimestamp)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 1.0);
   auto exiting_runner =
    BacktestRunner{exiting,
                   market,

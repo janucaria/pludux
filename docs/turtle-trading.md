@@ -221,12 +221,12 @@ Because the current Donchian band includes the current bar, comparing it with
 its one-bar lookback detects a new 20-bar extreme. It is the daily-bar analogue
 of exceeding the preceding 20-day extreme by one tick.
 
-Choose one timing policy and use it consistently:
+Choose the entry price and delay for the backtest.
 
-- `Next Open` is the recommended auditable backtest setting. It observes the
-  completed breakout bar and trades the next available open.
-- `Current Close` trades on the breakout bar's close. It is closer in calendar
-  time, but the close is not the original intraday breakout price.
+- **Open** with Delay 1 observes the completed breakout bar and trades the
+  next available open.
+- **Close** with Delay 0 trades at the breakout bar's closing print, which
+  may differ from the intraday breakout price.
 
 Neither option exactly reproduces the original rule, which traded when the
 level was crossed intraday and entered at the open when the market gapped
@@ -263,7 +263,8 @@ differently.
 
 ### Exit
 
-Configure a full exit:
+Configure a full signal exit with **Price** set to **Open** and **Delay** set
+to 1 to exit at the open after a completed exit signal.
 
 ```text
 Long:  current 10-bar lower band < previous 10-bar lower band
@@ -311,6 +312,8 @@ Configure both long and short positions as follows:
 
 ```text
 Signal:       Position R-Multiple >= 0.5
+Price:        Open
+Delay:        1
 Retrigger:    Every Evaluation
 Cooldown:     0
 Max layers:   4
@@ -318,8 +321,9 @@ Max layers:   4
 
 Use High as the Position R-Multiple source for long signals and Low for short
 signals if the goal is to detect that the bar touched the 0.5R threshold. Use
-Close instead for a close-confirmed variant. The selected entry timing still
-determines the actual fill price.
+Close as the signal source for a close-confirmed variant. The Price setting
+determines the fill independently of the source used to detect the signal.
+[Signal prices and delays](execution.md#signal-prices-and-delays)
 
 Set both favorable and unfavorable stop/target references to:
 
@@ -444,8 +448,8 @@ The original Turtles bought the strongest markets and sold short the weakest
 when simultaneous signals competed for limited capacity. Some used movement in
 `N` since breakout or a three-month price change divided by current `N`.
 
-Pludux ranks immutable Requested Orders at each Next Open or Current Close
-phase. Portfolio comparators can combine Requested Order values with the
+Pludux ranks immutable Requested Orders at each modeled execution point.
+Portfolio comparators can combine Requested Order values with the
 order's asset OHLCV fields, custom `DATA` fields, lookbacks, constants, and
 basic scalar math. They cannot inspect technical-indicator nodes or named
 Strategy series.
@@ -472,15 +476,14 @@ Watchlist order.
 
 Asset visibility follows the execution phase:
 
-- At Current Close, OHLCV and `DATA` refer to the completed current bar.
-- At Next Open, OHLCV and `DATA` refer to the previous completed bar. Requested
-  Order Price is the current executable open price.
+- At the close, OHLCV and `DATA` refer to the completed current bar.
+- At the open or an intrabar touch, OHLCV and `DATA` refer to the previous
+  completed bar. Requested Order Price gives the executable fill price.
 
 The alternative strength interpretation based on movement from the exact
-breakout price is not represented precisely. Pludux does not detect and fill a
-Donchian entry at its intraday crossing price. Requested Order Price is the
-configured Current Close or Next Open execution price, not necessarily the
-historical breakout threshold or first traded breakout price.
+breakout price is approximate in this setup. Requested Order Price is the
+configured execution price, which can differ from the historical breakout
+threshold or first traded breakout price.
 
 Every Requested Order in a phase is built from the same pre-entry account
 snapshot. Ranking values remain immutable. Cash and capacity are then refreshed
@@ -526,10 +529,10 @@ frozen Unit requested by all later layers.
 ### Intraday breakout fills
 
 The Turtles entered and exited when the market traded through a channel level,
-including gap-open handling. Pludux Strategy signals are evaluated at Current
-Close or scheduled for Next Open. OHLC price stops can be processed inside a
-bar using the configured intrabar path, but Donchian entry and exit signals are
-not continuously evaluated and filled at their exact intraday threshold.
+including gap-open handling. Pludux uses the signal from the candle selected
+by Delay. A custom Price can fill when the modeled OHLC path touches that
+price. The modeled sequence approximates intraday movement using candle data.
+The Open and Close settings used in the examples fill at those candle events.
 
 ### One layer per bar
 
@@ -607,10 +610,10 @@ Before treating a run as a Turtle-style result, verify:
   three-month price movement divided by Requested Order Risk Distance.
 - The strength lookback has sufficient warm-up history, and any non-finite
   ranking scores are reviewed.
-- Entry timing and High/Low versus Close signal sources are recorded with the
-  results.
-- Sensitivity runs compare Current Close and Next Open when execution timing is
-  material.
+- Price and Delay for entries, signal exits, and pyramiding are recorded with
+  the results, along with which price fields each signal reads.
+- Sensitivity runs compare **Close** with Delay 0 and **Open** with Delay 1
+  when execution timing is material.
 
 ## Interpretation
 

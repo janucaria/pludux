@@ -29,7 +29,7 @@ rule type. This applies to position sections and rule properties, collections,
 plots, and method parameters that have domain defaults. For recognized fields,
 the parser rejects `null`, wrong types, invalid enums or methods, invalid
 ranges, lossy integral conversions, numeric strings, and overflow. Unknown
-properties are ignored, including former field names.
+properties are ignored.
 
 `series` is a lower-snake-case dictionary of reusable named expressions.
 `positions` is an object whose `long` and `short` values are `false` or a side
@@ -38,8 +38,8 @@ pyramiding, stop losses, and take profits. `plots` is an array of plot groups;
 each group carries a label, overlay choice, and ordered plot methods. Current
 enum spellings include:
 
-- entry timing: `CURRENT_CLOSE`, `NEXT_OPEN`
 - entry source: `SIGNAL` (default), `CALL`
+- price exits start: `CURRENT_BAR` (default), `NEXT_BAR`
 - exit activation: `SIMULTANEOUS`, `AFTER_PREVIOUS`
 - pyramid retrigger: `EVERY_EVALUATION`, `AFTER_FALSE`
 - stop/target reference: `LATEST_ENTRY_PRICE`, `AVERAGE_PRICE`,
@@ -49,8 +49,59 @@ Reduction fractions must be greater than zero and no greater than one. Refer to
 [Execution and Position Lifecycle](execution.md) before changing these fields.
 
 Set `positions.long.entry.source` or `positions.short.entry.source` to `CALL`
-to use the matching Calls table row at the candle open. Signal and timing
-apply to entries whose source is `SIGNAL`. [Call entries](execution.md#call-entries)
+to use the matching Calls table row at the candle open.
+[Call entries](execution.md#call-entries)
+
+## Signal order fields
+
+Each position's `entry`, each rule in `exits.rules`, and `pyramiding` accept
+`price` and `delay`. The default for each is `MARKET_DATA.OPEN` with delay 1.
+`SIGNAL` entries also accept `priceExitsStart`. For example, these are the
+defaults under `positions.long.entry`.
+
+```json
+{
+  "price": { "method": "MARKET_DATA.OPEN" },
+  "delay": 1,
+  "priceExitsStart": "CURRENT_BAR"
+}
+```
+
+- `price` accepts a numeric literal or a Strategy method. Use
+  `MARKET_DATA.OPEN` or `MARKET_DATA.CLOSE` directly to fill at the
+  corresponding candle event. Other expression results fill at their first
+  touch on the candle's modeled path.
+- `delay` is a nonnegative integer that looks back for the rule's signal in
+  real candles on the same Asset. Delay 0 uses the current candle.
+- `priceExitsStart` controls when stop losses, trailing stops, and take profits
+  become active on a new position. `CURRENT_BAR` starts them after the fill.
+  `NEXT_BAR` starts them at the Asset's next real open.
+
+For example, this fragment selects the previous candle's signal, calculates
+95% of the current candle's closing price, and starts price exits at the next
+real open. The current candle must touch the computed price to fill.
+
+```json
+{
+  "price": {
+    "method": "OPERATOR.MULTIPLY",
+    "params": {
+      "multiplicand": "MARKET_DATA.CLOSE",
+      "multiplier": 0.95
+    }
+  },
+  "delay": 1,
+  "priceExitsStart": "NEXT_BAR"
+}
+```
+
+Existing `timing` values still import for entries, signal exits, and
+pyramiding. `NEXT_OPEN` maps to `MARKET_DATA.OPEN` and delay 1.
+`CURRENT_CLOSE` maps to `MARKET_DATA.CLOSE` and delay 0. A migrated entry uses
+`CURRENT_BAR` for `NEXT_OPEN` or `NEXT_BAR` for `CURRENT_CLOSE`. When a legacy
+entry omits both `delay` and `priceExitsStart`, its `timing` continues to
+determine the fill even if the file contains an old `price` field. Exports
+write the new fields. [Signal prices and delays](execution.md#signal-prices-and-delays)
 
 ## Method objects
 

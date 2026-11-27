@@ -151,22 +151,6 @@ auto serialize_exit_activation(ExitActivation activation) -> std::string
                                                      : "SIMULTANEOUS";
 }
 
-auto parse_signal_timing(std::string_view value) -> SignalTiming
-{
-  if(value == "CURRENT_CLOSE") {
-    return SignalTiming::CurrentClose;
-  }
-  if(value == "NEXT_OPEN") {
-    return SignalTiming::NextOpen;
-  }
-  throw std::runtime_error{"Invalid signal timing"};
-}
-
-auto serialize_signal_timing(SignalTiming timing) -> std::string
-{
-  return timing == SignalTiming::CurrentClose ? "CURRENT_CLOSE" : "NEXT_OPEN";
-}
-
 auto parse_pyramiding_retrigger(std::string_view value) -> PyramidingRetrigger
 {
   if(value == "EVERY_EVALUATION") {
@@ -223,6 +207,36 @@ auto parse_reduce(const jsoncons::ojson& config, double default_value) -> double
   return reduce;
 }
 
+auto parse_signal_order(Strategy::SignalOrder& order,
+                        const jsoncons::ojson& json,
+                        auto& config_parser) -> bool
+{
+  auto legacy_close = false;
+  if(json.contains("timing")) {
+    const auto timing = strict_as<std::string>(json.at("timing"));
+    if(timing == "CURRENT_CLOSE") {
+      order.price(CloseNode{});
+      order.delay(0);
+      legacy_close = true;
+    } else if(timing != "NEXT_OPEN") {
+      throw std::runtime_error{"Invalid legacy signal timing"};
+    }
+  }
+  // Older files may include an ignored price field alongside timing.
+  const auto legacy_price = json.contains("timing") &&
+                            !json.contains("delay") &&
+                            !json.contains("priceExitsStart");
+  if(!legacy_price && json.contains("price")) {
+    const auto& price = json.at("price");
+    if(price.is_bool()) {
+      throw std::invalid_argument{"Price must be a numeric expression"};
+    }
+    order.price(config_parser.parse_node(price));
+  }
+  order.delay(value_or(json, "delay", order.delay()));
+  return legacy_close;
+}
+
 auto parse_strategy_position(const jsoncons::ojson& position_json,
                           auto& config_parser) -> Strategy::Position
 {
@@ -249,20 +263,32 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     if(!entry_json.is_object()) {
       throw std::runtime_error{"Invalid entry configuration in strategy JSON"};
     }
-    const auto defaults = Strategy::Entry{};
     const auto source = entry_json.contains("source")
                          ? strict_as<std::string>(entry_json.at("source"))
                          : "SIGNAL";
     if(source != "SIGNAL" && source != "CALL")
       throw std::runtime_error{"Invalid entry source"};
-    position.entry(Strategy::Entry{
-     entry_json.contains("signal")
-      ? config_parser.parse_node(entry_json.at("signal"))
-      : defaults.signal(),
-     entry_json.contains("timing")
-      ? parse_signal_timing(strict_as<std::string>(entry_json.at("timing")))
-      : defaults.timing(),
-     source == "CALL" ? EntrySource::Call : EntrySource::Signal});
+    auto entry = Strategy::Entry{};
+    entry.entry_source(source == "CALL" ? EntrySource::Call
+                                        : EntrySource::Signal);
+    if(entry_json.contains("signal")) {
+      entry.signal(config_parser.parse_node(entry_json.at("signal")));
+    }
+    if(parse_signal_order(entry, entry_json, config_parser)) {
+      entry.price_exits_start(PriceExitsStart::NextBar);
+    }
+    if(entry_json.contains("priceExitsStart")) {
+      const auto start =
+       strict_as<std::string>(entry_json.at("priceExitsStart"));
+      if(start == "CURRENT_BAR") {
+        entry.price_exits_start(PriceExitsStart::CurrentBar);
+      } else if(start == "NEXT_BAR") {
+        entry.price_exits_start(PriceExitsStart::NextBar);
+      } else {
+        throw std::runtime_error{"Invalid price exits start"};
+      }
+    }
+    position.entry(std::move(entry));
   }
 
   if(position_json.contains("exits")) {
@@ -293,10 +319,10 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
        exit_json.contains("signal")
         ? config_parser.parse_node(exit_json.at("signal"))
         : defaults.signal(),
-       exit_json.contains("timing")
-        ? parse_signal_timing(strict_as<std::string>(exit_json.at("timing")))
-        : defaults.timing(),
+       defaults.price(),
+       defaults.delay(),
        parse_reduce(exit_json, defaults.reduce()));
+      parse_signal_order(exits.back(), exit_json, config_parser);
     }
     position.exits(std::move(exits));
   }
@@ -310,10 +336,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     if(pyramiding_json.contains("signal")) {
       pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
     }
-    if(pyramiding_json.contains("timing")) {
-      pyramiding.timing(parse_signal_timing(
-       strict_as<std::string>(pyramiding_json.at("timing"))));
-    }
+    parse_signal_order(pyramiding, pyramiding_json, config_parser);
     if(pyramiding_json.contains("retrigger")) {
       pyramiding.retrigger(parse_pyramiding_retrigger(
        strict_as<std::string>(pyramiding_json.at("retrigger"))));
@@ -447,8 +470,13 @@ auto serialize_strategy_position(const Strategy::Position& position,
     position_json["entry"]["source"] = "CALL";
   position_json["entry"]["signal"] =
    config_parser.serialize_node(position.entry().signal());
-  position_json["entry"]["timing"] =
-   serialize_signal_timing(position.entry().timing());
+  position_json["entry"]["price"] =
+   config_parser.serialize_node(position.entry().price());
+  position_json["entry"]["delay"] = position.entry().delay();
+  position_json["entry"]["priceExitsStart"] =
+   position.entry().price_exits_start() == PriceExitsStart::CurrentBar
+    ? "CURRENT_BAR"
+    : "NEXT_BAR";
 
   position_json["exits"] = jsoncons::ojson{};
   position_json["exits"]["activation"] =
@@ -458,7 +486,8 @@ auto serialize_strategy_position(const Strategy::Position& position,
     auto exit_json = jsoncons::ojson{};
     exit_json["enabled"] = exit.enabled();
     exit_json["signal"] = config_parser.serialize_node(exit.signal());
-    exit_json["timing"] = serialize_signal_timing(exit.timing());
+    exit_json["price"] = config_parser.serialize_node(exit.price());
+    exit_json["delay"] = exit.delay();
     exit_json["reduce"] = exit.reduce();
     position_json["exits"]["rules"].push_back(std::move(exit_json));
   }
@@ -466,8 +495,9 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["pyramiding"] = jsoncons::ojson{};
   position_json["pyramiding"]["signal"] =
    config_parser.serialize_node(position.pyramiding().signal());
-  position_json["pyramiding"]["timing"] =
-   serialize_signal_timing(position.pyramiding().timing());
+  position_json["pyramiding"]["price"] =
+   config_parser.serialize_node(position.pyramiding().price());
+  position_json["pyramiding"]["delay"] = position.pyramiding().delay();
   position_json["pyramiding"]["retrigger"] =
    serialize_pyramiding_retrigger(position.pyramiding().retrigger());
   position_json["pyramiding"]["cooldown"] = position.pyramiding().cooldown();

@@ -13,6 +13,8 @@ import pludux.backtest;
 using namespace pludux;
 using namespace pludux::backtest;
 
+using SignalOrder = BacktestRunner::PositionRule::SignalOrder;
+
 auto make_single_bar_asset(double open_price = 100.0) -> Asset
 {
   return Asset{"Test",
@@ -277,8 +279,9 @@ auto make_position_rule(
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(true,
                             std::move(exit_method),
-                            exit_signal_delay == 0 ? SignalTiming::CurrentClose
-                                                   : SignalTiming::NextOpen,
+                            exit_signal_delay == 0
+                             ? SignalOrder{CloseMethod{}, 0}
+                             : SignalOrder{OpenMethod{}, 1},
                             signal_exit_reduce);
   auto stop_losses = single_stop_loss(std::move(stop_price_method),
                                       stop_loss_enabled,
@@ -291,10 +294,10 @@ auto make_position_rule(
                                       pyramiding_cooldown,
                                       std::move(risk_distance_method),
                                       std::move(stop_losses),
-                                      SignalTiming::CurrentClose,
+                                      SignalOrder{CloseMethod{}, 0},
                                       pyramiding_signal_delay == 0
-                                       ? SignalTiming::CurrentClose
-                                       : SignalTiming::NextOpen,
+                                       ? SignalOrder{CloseMethod{}, 0}
+                                       : SignalOrder{OpenMethod{}, 1},
                                       favorable_stop_target_reference,
                                       unfavorable_stop_target_reference,
                                       std::move(take_profits),
@@ -508,7 +511,9 @@ TEST(BacktestRunnerSetupTest,
   auto long_position = Strategy::Position{};
   long_position.entry(Strategy::Entry{
    GreaterThanNode<Context>{SeriesNode{"nested"}, ValueNode{5.0}},
-   SignalTiming::CurrentClose});
+   CloseNode{},
+   0,
+   PriceExitsStart::NextBar});
   const auto shared_strategy = Strategy{"Shared",
                                   std::move(series_nodes),
                                   std::move(long_position),
@@ -706,9 +711,9 @@ TEST(BacktestRunnerSetupTest,
   auto main_exits = std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   main_exits.emplace_back(true,
                           EqualMethod{CloseMethod{}, ValueMethod{110.0}},
-                          SignalTiming::CurrentClose,
+                          SignalOrder{CloseMethod{}, 0},
                           0.5);
-   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
+  auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    BacktestRunner::PositionRule{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
@@ -925,9 +930,9 @@ TEST(BacktestRunnerSetupTest,
                                         0,
                                         ValueMethod{10.0},
                                         {},
-                                        SignalTiming::NextOpen};
+                                        SignalOrder{OpenMethod{}, 1}};
   };
-   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
+  auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
@@ -3909,7 +3914,7 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
                                                0,
                                                ValueMethod{10.0},
                                                {},
-                                               SignalTiming::NextOpen},
+                                               SignalOrder{OpenMethod{}, 1}},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -4056,7 +4061,7 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
                                                0,
                                                ValueMethod{10.0},
                                                {},
-                                               SignalTiming::NextOpen},
+                                               SignalOrder{OpenMethod{}, 1}},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -4823,8 +4828,8 @@ TEST(BacktestRunnerTest,
                                                0,
                                                ValueMethod{10.0},
                                                std::move(stop_losses),
-                                               SignalTiming::CurrentClose,
-                                               SignalTiming::CurrentClose},
+                                               SignalOrder{CloseMethod{}, 0},
+                                               SignalOrder{CloseMethod{}, 0}},
                   BacktestRunner::PositionRule{},
                   5000.0};
 
@@ -4922,8 +4927,8 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
                                                0,
                                                ValueMethod{10.0},
                                                std::move(stop_losses),
-                                               SignalTiming::CurrentClose,
-                                               SignalTiming::CurrentClose},
+                                               SignalOrder{CloseMethod{}, 0},
+                                               SignalOrder{CloseMethod{}, 0}},
                   BacktestRunner::PositionRule{},
                   5000.0};
 
@@ -5167,11 +5172,11 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   false, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+   false, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 1.0);
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 0.5);
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 1.0);
 
   auto runner = BacktestRunner{
    asset,
@@ -5226,9 +5231,9 @@ TEST(BacktestRunnerTest, AfterPreviousSignalExitsAdvanceAtTheSameCurrentClose)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::CurrentClose, 0.5);
+   true, BooleanMethod<true>{}, SignalOrder{CloseMethod{}, 0}, 0.5);
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::CurrentClose, 1.0);
+   true, BooleanMethod<true>{}, SignalOrder{CloseMethod{}, 0}, 1.0);
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -5245,8 +5250,8 @@ TEST(BacktestRunnerTest, AfterPreviousSignalExitsAdvanceAtTheSameCurrentClose)
                                 0,
                                 ValueMethod{10.0},
                                 {},
-                                SignalTiming::CurrentClose,
-                                SignalTiming::NextOpen,
+                                SignalOrder{CloseMethod{}, 0},
+                                SignalOrder{OpenMethod{}, 1},
                                 StopTargetReferencePrice::AveragePrice,
                                 StopTargetReferencePrice::AveragePrice,
                                 {},
@@ -5288,9 +5293,9 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 0.5);
   signal_exits.emplace_back(
-   true, BooleanMethod<false>{}, SignalTiming::NextOpen, 1.0);
+   true, BooleanMethod<false>{}, SignalOrder{OpenMethod{}, 1}, 1.0);
 
   auto runner = BacktestRunner{
    asset,
@@ -5339,7 +5344,7 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
-   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
+   true, BooleanMethod<true>{}, SignalOrder{OpenMethod{}, 1}, 0.5);
 
   auto runner =
    BacktestRunner{asset,
@@ -5355,8 +5360,8 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
                    0,
                    ValueMethod{10.0},
                    single_stop_loss(ValueMethod{90.0}, true, false, 0.25),
-                   SignalTiming::NextOpen,
-                   SignalTiming::NextOpen,
+                   SignalOrder{OpenMethod{}, 1},
+                   SignalOrder{OpenMethod{}, 1},
                    StopTargetReferencePrice::AveragePrice,
                    StopTargetReferencePrice::AveragePrice,
                    single_take_profit(ValueMethod{120.0}, true, 0.5)},
@@ -5683,8 +5688,8 @@ TEST(BacktestRunnerTest,
                                 0,
                                 ValueMethod{10.0},
                                 {},
-                                SignalTiming::CurrentClose,
-                                SignalTiming::NextOpen,
+                                SignalOrder{CloseMethod{}, 0},
+                                SignalOrder{OpenMethod{}, 1},
                                 StopTargetReferencePrice::AveragePrice,
                                 StopTargetReferencePrice::AveragePrice,
                                 std::move(take_profits),

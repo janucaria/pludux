@@ -477,14 +477,18 @@ auto collect_declarations(const Strategy& strategy) -> StrategyDeclarations
 
   const auto collect_from_position =
    [&declarations](const Strategy::Position& position) {
-     if(position.entry().entry_source() == EntrySource::Signal)
+     if(position.entry().entry_source() == EntrySource::Signal) {
        collect_declarations(position.entry().signal(), declarations);
+       collect_declarations(position.entry().price(), declarations);
+     }
      for(const auto& exit : position.exits()) {
        if(exit.enabled()) {
          collect_declarations(exit.signal(), declarations);
+         collect_declarations(exit.price(), declarations);
        }
      }
      collect_declarations(position.pyramiding().signal(), declarations);
+     collect_declarations(position.pyramiding().price(), declarations);
      collect_declarations(position.risk_distance(), declarations);
      for(const auto& stop_loss : position.stop_losses()) {
        if(stop_loss.enabled()) {

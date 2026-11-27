@@ -45,6 +45,13 @@ export JSON. The UI also exposes built-in Strategies and a node editor for
 numeric expressions, conditions, named series, and portfolio comparators.
 
 For each enabled side, set **Entry Source** to **Signal** or **Call**.
+Signal entries, signal exit rules, and pyramiding each have **Price** and
+**Delay**. Use the Strategy method editor to select **Open**, **Close**, or a
+custom price expression. Delay selects the signal that many real candles back
+on the same Asset. Signal entries also have **Price Exits Start**. Choose
+**Current Bar** to start protective orders after the entry fills or **Next
+Bar** to start them at the next real open. [Signal prices and delays](execution.md#signal-prices-and-delays)
+
 Use the **Call** node in Strategy expressions to read a logical field from the active
 call row. For example, the same Strategy can use different columns for risk
 distance in different System setups. [Call row values](nodes.md#call-row-values)
@@ -95,15 +102,15 @@ market context), Broker (the Market's broker or execution provider), capacity
 limits, Intrabar Path, entry comparators, and ordered Systems.
 
 The Intrabar Path choices are **Low First**, **High First**, and
-**Candle Direction**. All Systems in the Portfolio use the selected path rule
-for price exits. [Intrabar Path](execution.md#intrabar-path)
+**Candle Direction**. All Systems use the selected path for stop and target
+orders and for signals that fill at a custom price. [Intrabar Path](execution.md#intrabar-path)
 
 Entry comparators may use Requested Order values, phase-visible market data,
 and Strategy Performance from each requesting Strategy setup's immutable
-request-discovery snapshot. This applies to initial and pyramiding requests;
-named series and indicators are not available. Current Close sees completed
-current-bar OHLCV and custom DATA. Next Open sees the previous completed bar;
-use Requested Order Price when you need the executable current open price.
+request-discovery snapshot. This applies to initial and pyramiding requests.
+Named series and indicators are unavailable. Close fills see the completed
+current candle's OHLCV and custom DATA. Open fills and intrabar touches see
+the previous completed candle. Use Requested Order Price for the fill price.
 Performance may already influence Bayesian or Kelly sizing, so using it for
 ranking can give the same evidence additional weight. See
 [Portfolio Backtesting](portfolio-backtesting.md) for authoritative comparator

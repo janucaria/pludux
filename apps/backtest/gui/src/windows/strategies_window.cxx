@@ -2264,34 +2264,22 @@ private:
     }
   }
 
-  auto render_signal_timing(this const auto&,
-                            const char* label,
-                            const char* id,
-                            backtest::SignalTiming timing)
-   -> backtest::SignalTiming
+  void render_signal_order(this auto& self,
+                           backtest::Strategy::SignalOrder& order,
+                           WindowContext& context)
   {
-    ui::field_label(
-     label,
-     "Current Close executes at the signal candle close; Next Open waits for "
-     "the following candle.");
-    const auto preview = timing == backtest::SignalTiming::CurrentClose
-                          ? "Current Close"
-                          : "Next Open";
-    if(ImGui::BeginCombo(id, preview)) {
-      for(const auto [value, title] :
-          {std::pair{backtest::SignalTiming::CurrentClose, "Current Close"},
-           std::pair{backtest::SignalTiming::NextOpen, "Next Open"}}) {
-        const auto selected = timing == value;
-        if(ImGui::Selectable(title, selected)) {
-          timing = value;
-        }
-        if(selected) {
-          ImGui::SetItemDefaultFocus();
-        }
-      }
-      ImGui::EndCombo();
+    ui::field_label("Price");
+    auto price = order.price();
+    ImGui::PushID("price");
+    self.render_series_node(price, context);
+    ImGui::PopID();
+    order.price(std::move(price));
+    auto delay = order.delay();
+    ui::field_label("Delay",
+                    "Number of asset candles to look back for the signal.");
+    if(ui::input_uint32("##delay", delay)) {
+      order.delay(delay);
     }
-    return timing;
   }
 
   auto render_exit_activation(this const auto&,
@@ -2370,8 +2358,19 @@ private:
       if(entry.entry_source() == backtest::EntrySource::Signal) {
         auto changed_node = self.render_condition_node(entry.signal(), context);
         entry.signal(std::move(changed_node));
-        entry.timing(
-         self.render_signal_timing("Timing", "##timing", entry.timing()));
+        self.render_signal_order(entry, context);
+        auto start =
+         entry.price_exits_start() == backtest::PriceExitsStart::CurrentBar ? 0
+                                                                            : 1;
+        ui::field_label(
+         "Price Exits Start",
+         "When stop losses, trailing stops, and take profits become active.");
+        if(ImGui::Combo(
+            "##price_exits_start", &start, "Current Bar\0Next Bar\0")) {
+          entry.price_exits_start(start == 0
+                                   ? backtest::PriceExitsStart::CurrentBar
+                                   : backtest::PriceExitsStart::NextBar);
+        }
       } else {
         ImGui::TextWrapped(
          "Enter at the matching Call candle open within the mapped bounds.");
@@ -2428,8 +2427,7 @@ private:
           auto changed_node =
            self.render_condition_node(exit.signal(), context);
           exit.signal(std::move(changed_node));
-          exit.timing(
-           self.render_signal_timing("Timing", "##timing", exit.timing()));
+          self.render_signal_order(exit, context);
 
           ImGui::PushID("reduce");
           exit.reduce(self.render_position_reduction(exit.reduce()));
@@ -2455,8 +2453,7 @@ private:
        self.render_condition_node(pyramiding.signal(), context);
       pyramiding.signal(std::move(changed_node));
 
-      pyramiding.timing(
-       self.render_signal_timing("Timing", "##timing", pyramiding.timing()));
+      self.render_signal_order(pyramiding, context);
       pyramiding.retrigger(
        self.render_pyramiding_retrigger(pyramiding.retrigger()));
 

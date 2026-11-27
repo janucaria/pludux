@@ -353,16 +353,23 @@ private:
       }
 
       const auto make_position_rule =
-        [&input_context](const backtest::Strategy::Position& position) {
+       [&input_context](const backtest::Strategy::Position& position) {
+         const auto compile_order =
+          [&input_context](const backtest::Strategy::SignalOrder& order) {
+            return backtest::BacktestRunner::PositionRule::SignalOrder{
+             node_to_erased_method<backtest::BacktestMethodContext>(
+              order.price(), input_context),
+             order.delay()};
+          };
          auto signal_exits =
           std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
          signal_exits.reserve(position.exits().size());
          for(const auto& exit : position.exits()) {
            signal_exits.emplace_back(
             exit.enabled(),
-            node_to_erased_method<backtest::BacktestMethodContext>(exit.signal(),
-                                                             input_context),
-            exit.timing(),
+            node_to_erased_method<backtest::BacktestMethodContext>(
+             exit.signal(), input_context),
+            compile_order(exit),
             exit.reduce());
          }
          auto take_profits =
@@ -386,7 +393,7 @@ private:
             stop_loss.trailing(),
             stop_loss.reduce());
          }
-         return backtest::BacktestRunner::PositionRule{
+         auto rule = backtest::BacktestRunner::PositionRule{
           position.entry().entry_source() == backtest::EntrySource::Call
            ? backtest::StrategyMethod{BooleanMethod<false>{}}
            : node_to_erased_method<backtest::BacktestMethodContext>(
@@ -399,8 +406,8 @@ private:
           node_to_erased_method<backtest::BacktestMethodContext>(
            position.risk_distance(), input_context),
           std::move(stop_losses),
-          position.entry().timing(),
-          position.pyramiding().timing(),
+          {},
+          compile_order(position.pyramiding()),
           position.pyramiding().favorable_stop_target_reference(),
           position.pyramiding().unfavorable_stop_target_reference(),
           std::move(take_profits),
@@ -409,6 +416,11 @@ private:
           position.take_profits_activation(),
           position.pyramiding().retrigger(),
           position.entry().entry_source()};
+         const auto& entry = position.entry();
+         auto order = compile_order(entry);
+         rule.configure_entry(
+          std::move(order.price), order.delay, entry.price_exits_start());
+         return rule;
        };
 
       auto entry_filter_conversion_context = NodeToErasedMethodContext{};

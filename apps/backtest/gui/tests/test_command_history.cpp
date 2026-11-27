@@ -414,8 +414,11 @@ TEST(ApplicationStateCalls, RevalidatesTableStrategySetupAndWatchlist)
   auto series = pludux::OrderedNamedRegistry<StrategyNode>{};
   series.set("stop", CallNode{"stop"});
   auto position = Strategy::Position{};
-  position.entry(Strategy::Entry{
-   pludux::FalseNode{}, SignalTiming::NextOpen, EntrySource::Call});
+  position.entry(Strategy::Entry{pludux::FalseNode{},
+                                 pludux::OpenNode{},
+                                 1,
+                                 PriceExitsStart::CurrentBar,
+                                 EntrySource::Call});
   state.add_strategy(Strategy{"Strat", series, position, {}, {}});
   const auto strategy = state.get_strategy_handles().front();
   auto setup = StrategySetup{strategy};

@@ -9,7 +9,9 @@
   "positions": {
     "long": {
       "entry": {
-        "timing": "CURRENT_CLOSE",
+        "price": { "method": "MARKET_DATA.CLOSE" },
+        "delay": 0,
+        "priceExitsStart": "NEXT_BAR",
         "signal": {
           "method": "COMPARISON.GREATER_THAN",
           "params": {

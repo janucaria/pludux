@@ -56,7 +56,8 @@
             }
           }
         },
-        "timing": "NEXT_OPEN"
+        "price": { "method": "MARKET_DATA.OPEN" },
+        "delay": 1
       }
     }
   }

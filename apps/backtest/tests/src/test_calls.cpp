@@ -20,6 +20,8 @@ import pludux.backtest;
 using namespace pludux;
 using namespace pludux::backtest;
 
+using SignalOrder = BacktestRunner::PositionRule::SignalOrder;
+
 namespace {
 
 const auto columns = CallColumns{"When", "Ticker", "Bullish", "Low", "High"};
@@ -59,8 +61,8 @@ auto call_rule(
                                 0,
                                 std::move(risk),
                                 std::move(stops),
-                                SignalTiming::NextOpen,
-                                SignalTiming::NextOpen,
+                                SignalOrder{OpenMethod{}, 1},
+                                SignalOrder{OpenMethod{}, 1},
                                 StopTargetReferencePrice::AveragePrice,
                                 StopTargetReferencePrice::AveragePrice,
                                 std::move(targets)};
@@ -338,7 +340,7 @@ TEST(CallRunnerTest, BindsOpeningRowToRiskAndExitsForEntirePosition)
                                 0,
                                 ValueMethod{9.0},
                                 {},
-                                SignalTiming::NextOpen});
+                                SignalOrder{OpenMethod{}, 1}});
   setup.series_methods.set("opening target", as_method(CallNode{"target"}));
   auto runner = BacktestRunner{asset, market, broker, profile, {setup}, 1'000};
   auto series_results = std::vector<SeriesEvaluationResults>(1);
@@ -403,14 +405,15 @@ TEST(CallRunnerTest, PrioritySelectsBetweenCallAndPendingNextOpenSignal)
   const auto market = Market{"Market"};
   const auto broker = Broker{"Broker"};
   const auto profile = fixed_quantity_profile();
-  const auto signal_long = BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                                        {},
-                                                        BooleanMethod<false>{},
-                                                        0,
-                                                        0,
-                                                        ValueMethod{10.0},
-                                                        {},
-                                                        SignalTiming::NextOpen};
+  const auto signal_long =
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                0,
+                                0,
+                                ValueMethod{10.0},
+                                {},
+                                SignalOrder{OpenMethod{}, 1}};
   for(const auto priority :
       {EntryPriority::CallFirst, EntryPriority::SignalFirst}) {
     auto setup = call_setup(
@@ -565,8 +568,8 @@ TEST(CallRunnerTest, KeepsOriginalRowAcrossPyramidAndPartialTarget)
                                 0,
                                 SeriesMethod{"bound risk"},
                                 {},
-                                SignalTiming::NextOpen,
-                                SignalTiming::NextOpen,
+                                SignalOrder{OpenMethod{}, 1},
+                                SignalOrder{OpenMethod{}, 1},
                                 StopTargetReferencePrice::AveragePrice,
                                 StopTargetReferencePrice::AveragePrice,
                                 {{as_method(CallNode{"target"}), true, 0.5}}};
@@ -739,7 +742,7 @@ TEST(CallRunnerTest, InvalidCallRiskAllowsPendingOppositeSignalAtSameOpen)
                                 0,
                                 ValueMethod{5.0},
                                 {},
-                                SignalTiming::NextOpen});
+                                SignalOrder{OpenMethod{}, 1}});
   auto runner = BacktestRunner{asset, market, broker, profile, {setup}, 1000};
   auto results = std::vector<SeriesEvaluationResults>(1);
   auto timeline = BacktestTimeline{};

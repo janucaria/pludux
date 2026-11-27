@@ -59,16 +59,42 @@ class BacktestRunner {
 public:
   class PositionRule {
   public:
+    struct SignalOrder {
+      SignalOrder(StrategyMethod price = OpenMethod{}, std::size_t delay = 1)
+      : price{std::move(price)}
+      , delay{delay}
+      {
+      }
+
+      auto at_open() const noexcept -> bool
+      {
+        return delay != 0 && series_method_cast<OpenMethod>(price) != nullptr;
+      }
+
+      auto at_close() const noexcept -> bool
+      {
+        return series_method_cast<CloseMethod>(price) != nullptr;
+      }
+
+      auto uses_touch() const noexcept -> bool
+      {
+        return !at_open() && !at_close();
+      }
+
+      StrategyMethod price;
+      std::size_t delay;
+    };
+
     class SignalExitRule {
     public:
       SignalExitRule(bool enabled = false,
-                     ErasedSeriesMethod<BacktestMethodContext>
-                      signal_method = BooleanMethod<false>{},
-                     SignalTiming timing = SignalTiming::NextOpen,
+                     ErasedSeriesMethod<BacktestMethodContext> signal_method =
+                      BooleanMethod<false>{},
+                     SignalOrder order = {},
                      double reduce = 1.0)
       : enabled_{enabled}
       , signal_method_{std::move(signal_method)}
-      , timing_{timing}
+      , order_{std::move(order)}
       , reduce_{reduce}
       {
       }
@@ -84,9 +110,9 @@ public:
         return self.signal_method_;
       }
 
-      auto timing(this const SignalExitRule& self) noexcept -> SignalTiming
+      auto order() const noexcept -> const SignalOrder&
       {
-        return self.timing_;
+        return order_;
       }
 
       auto reduce(this const SignalExitRule& self) noexcept -> double
@@ -97,7 +123,7 @@ public:
     private:
       bool enabled_;
       ErasedSeriesMethod<BacktestMethodContext> signal_method_;
-      SignalTiming timing_;
+      SignalOrder order_;
       double reduce_;
     };
 
@@ -187,8 +213,8 @@ public:
      std::size_t pyramiding_cooldown,
      ErasedSeriesMethod<BacktestMethodContext> risk_distance_method,
      std::vector<StopLossRule> stop_losses,
-     SignalTiming entry_timing = SignalTiming::CurrentClose,
-     SignalTiming pyramiding_timing = SignalTiming::NextOpen,
+     SignalOrder entry_order = {CloseMethod{}, 0},
+     SignalOrder pyramiding_order = {},
      StopTargetReferencePrice favorable_stop_target_reference =
       StopTargetReferencePrice::AveragePrice,
      StopTargetReferencePrice unfavorable_stop_target_reference =
@@ -207,8 +233,11 @@ public:
     , pyramiding_cooldown_{pyramiding_cooldown}
     , risk_distance_method_{std::move(risk_distance_method)}
     , stop_losses_{std::move(stop_losses)}
-    , entry_timing_{entry_timing}
-    , pyramiding_timing_{pyramiding_timing}
+    , entry_order_{std::move(entry_order)}
+    , price_exits_start_{!entry_order_.at_close() || source == EntrySource::Call
+                          ? PriceExitsStart::CurrentBar
+                          : PriceExitsStart::NextBar}
+    , pyramiding_order_{std::move(pyramiding_order)}
     , favorable_stop_target_reference_{favorable_stop_target_reference}
     , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
     , take_profits_{std::move(take_profits)}
@@ -271,15 +300,27 @@ public:
       return self.stop_losses_;
     }
 
-    auto entry_timing(this const PositionRule& self) noexcept -> SignalTiming
+    void configure_entry(StrategyMethod price,
+                         std::size_t delay,
+                         PriceExitsStart start)
     {
-      return self.entry_timing_;
+      entry_order_ = SignalOrder{std::move(price), delay};
+      price_exits_start_ = start;
     }
 
-    auto pyramiding_timing(this const PositionRule& self) noexcept
-     -> SignalTiming
+    auto entry_order() const noexcept -> const SignalOrder&
     {
-      return self.pyramiding_timing_;
+      return entry_order_;
+    }
+
+    auto price_exits_start() const noexcept -> PriceExitsStart
+    {
+      return price_exits_start_;
+    }
+
+    auto pyramiding_order() const noexcept -> const SignalOrder&
+    {
+      return pyramiding_order_;
     }
 
     auto pyramiding_retrigger(this const PositionRule& self) noexcept
@@ -336,8 +377,9 @@ public:
     ErasedSeriesMethod<BacktestMethodContext> risk_distance_method_{
      ValueMethod{1.0}};
     std::vector<StopLossRule> stop_losses_;
-    SignalTiming entry_timing_{SignalTiming::CurrentClose};
-    SignalTiming pyramiding_timing_{SignalTiming::NextOpen};
+    SignalOrder entry_order_{CloseMethod{}, 0};
+    PriceExitsStart price_exits_start_{PriceExitsStart::NextBar};
+    SignalOrder pyramiding_order_;
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
@@ -349,6 +391,17 @@ public:
     PyramidingRetrigger pyramiding_retrigger_{
      PyramidingRetrigger::EveryEvaluation};
     EntrySource source_{EntrySource::Signal};
+  };
+
+  struct SignalTouch {
+    double progress;
+    double price;
+  };
+
+  struct PositionTouches {
+    std::optional<std::size_t> trade_id;
+    std::vector<std::pair<std::size_t, SignalTouch>> exits;
+    std::optional<SignalTouch> pyramid;
   };
 
   class CompiledStrategy {
@@ -518,6 +571,8 @@ public:
   , is_failed_{is_failed}
   , intrabar_path_{intrabar_path}
   {
+    uses_intrabar_orders_ =
+     uses_touch_orders(long_position_) || uses_touch_orders(short_position_);
   }
 
   BacktestRunner(const Asset& asset,
@@ -555,6 +610,9 @@ public:
     }
     strategy_states_.reserve(strategies.size());
     for(auto& strategy : strategies) {
+      uses_intrabar_orders_ = uses_intrabar_orders_ ||
+                              uses_touch_orders(strategy.long_position) ||
+                              uses_touch_orders(strategy.short_position);
       uses_calls_ =
        uses_calls_ ||
        strategy.long_position.entry_source() == EntrySource::Call ||
@@ -662,15 +720,33 @@ public:
            SeriesEvaluationResults& series_evaluation_results,
            BacktestTimeline& timeline)
   {
-    if(!self.begin_bar(timeline, self.uses_calls_)) {
+    const auto mark_at_open = self.uses_calls_ || self.uses_intrabar_orders();
+    if(!self.begin_bar(timeline, mark_at_open)) {
       return;
     }
-    self.run_open_exits();
-    if(self.uses_calls_)
+    self.run_open_exits(!self.uses_intrabar_orders());
+    if(mark_at_open)
       self.update_accounting();
+    self.prepare_entry_candidates(series_evaluation_results,
+                                  self.intrabar_path_);
+    if(self.uses_intrabar_orders()) {
+      self.prepare_position_candidates(
+       series_evaluation_results, self.intrabar_path_, 0.0);
+      self.run_touch_exits(
+       0.0, self.active_snapshot_->open(), self.intrabar_path_, true);
+      self.settle_portfolio_account();
+    }
     self.run_open_entries(series_evaluation_results);
-    self.run_intrabar();
-    if(self.uses_calls_) {
+    self.run_signal_path(
+     [&](double progress) {
+       self.prepare_position_candidates(
+        series_evaluation_results, self.intrabar_path_, progress);
+     },
+     [&](double progress, bool initial_allowed) {
+       self.run_touch_entries(
+        series_evaluation_results, progress, initial_allowed);
+     });
+    if(mark_at_open) {
       self.mark_bar_close();
       self.update_accounting();
     }
@@ -683,15 +759,32 @@ public:
            std::vector<SeriesEvaluationResults>& setup_series_results,
            BacktestTimeline& timeline)
   {
-    if(!self.begin_bar(timeline, self.uses_calls_)) {
+    const auto mark_at_open = self.uses_calls_ || self.uses_intrabar_orders();
+    if(!self.begin_bar(timeline, mark_at_open)) {
       return;
     }
-    self.run_open_exits();
-    if(self.uses_calls_)
+    self.run_open_exits(!self.uses_intrabar_orders());
+    if(mark_at_open)
       self.update_accounting();
+    self.prepare_signal_candidates(setup_series_results, self.intrabar_path_);
+    if(self.uses_intrabar_orders()) {
+      self.run_touch_exits(
+       0.0, self.active_snapshot_->open(), self.intrabar_path_, true);
+      self.settle_portfolio_account();
+    }
     self.run_open_entries(setup_series_results);
-    self.run_intrabar();
-    if(self.uses_calls_) {
+    self.run_signal_path(
+     [&](double progress) {
+       self.prepare_position_candidates(
+        setup_series_results, self.intrabar_path_, progress);
+     },
+     [&](double progress, bool initial_allowed) {
+       if(const auto action = self.discover_touch_requested_order(
+           setup_series_results, progress, initial_allowed)) {
+         self.execute_requested_order(*action, setup_series_results);
+       }
+     });
+    if(mark_at_open) {
       self.mark_bar_close();
       self.update_accounting();
     }
@@ -711,6 +804,8 @@ public:
     self.active_timeline_index_ = timeline.size();
     self.active_snapshot_.emplace(
      self.asset_.get_snapshot(self.active_timeline_index_));
+    self.entry_touches_.assign(self.strategy_count(), {});
+    self.position_touches_.assign(self.strategy_count(), {});
     const auto& asset_snapshot = *self.active_snapshot_;
     const auto market_timestamp =
      static_cast<std::time_t>(asset_snapshot.datetime());
@@ -738,30 +833,43 @@ public:
 
   void mark_bar_close(this BacktestRunner& self)
   {
-    const auto close = self.active_snapshot_->close();
-    self.execution_session_.market_price(close);
+    self.mark_bar_price(self.active_snapshot_->close());
+  }
+
+  auto current_market_price(this const BacktestRunner& self) noexcept -> double
+  {
+    return self.execution_session_.market_price();
+  }
+
+  void mark_bar_price(this BacktestRunner& self, double price)
+  {
+    self.execution_session_.market_price(price);
     for(std::size_t index = 0; index < self.strategy_count(); ++index) {
       self.activate_strategy(index);
-      self.strategy_trade_session_.market_price(close);
-      self.strategy_session_.market_price(close);
+      self.strategy_trade_session_.market_price(price);
+      self.strategy_session_.market_price(price);
     }
   }
 
-  void run_open_exits(this BacktestRunner& self)
+  void run_open_exits(this BacktestRunner& self,
+                      bool include_signal_exits = true)
   {
     for(auto index = std::size_t{}; index < self.strategy_count(); ++index) {
       self.activate_strategy(index);
-      self.run_open_exits_active();
+      self.run_open_exits_active(include_signal_exits);
     }
   }
 
-  void run_open_exits_active(this BacktestRunner& self)
+  void run_open_exits_active(this BacktestRunner& self,
+                             bool include_signal_exits)
   {
     const auto& asset_snapshot = *self.active_snapshot_;
     self.process_open_price(asset_snapshot.open(),
                             self.closed_position_is_long_);
-    self.execute_pending_signal_exits(asset_snapshot.open(),
-                                      self.closed_position_is_long_);
+    if(include_signal_exits) {
+      self.execute_pending_signal_exits(asset_snapshot.open(),
+                                        self.closed_position_is_long_);
+    }
   }
 
   void run_open_entries(this BacktestRunner& self,
@@ -769,15 +877,26 @@ public:
   {
     const auto asset_snapshot = *self.active_snapshot_;
     auto context = self.make_context(series_evaluation_results);
+    const auto pending_entries =
+     std::array{self.is_open_signal(self.long_position_, 0),
+                self.is_open_signal(self.short_position_, 1)};
     const auto decision_snapshot =
-     self.active_timeline_index_ > 0 ? asset_snapshot[1] : asset_snapshot;
+     self.active_timeline_index_ > 0 || self.uses_intrabar_orders()
+      ? asset_snapshot[1]
+      : asset_snapshot;
     const auto current_drawdown_ratio =
      self.current_account_state_.drawdown_ratio();
-    if(self.strategy_trade_session_.is_open() && self.pending_pyramiding_) {
-      self.execute_pyramiding_action(
-       asset_snapshot.open(), decision_snapshot, context);
+    if(const auto& position = self.strategy_trade_session_.open_position()) {
+      const auto& rule = position->is_long_direction() ? self.long_position_
+                                                       : self.short_position_;
+      if(rule.pyramiding_order().at_open() && self.pyramid_is_due() &&
+         !self.pyramiding_is_paused()) {
+        self.execute_pyramiding_action(
+         asset_snapshot.open(), decision_snapshot, context);
+      } else {
+        self.run_touch_pyramid(0.0, decision_snapshot, context);
+      }
     }
-    self.pending_pyramiding_ = false;
 
     const auto* row = self.current_call();
     if(row) {
@@ -797,7 +916,7 @@ public:
               self.closed_position_is_long_ == row->is_long)
         reason = "Position conflict";
       else if(state.entry_priority == EntryPriority::SignalFirst &&
-              self.pending_entries_[row->is_long ? 1 : 0] &&
+              pending_entries[row->is_long ? 1 : 0] &&
               self.closed_position_is_long_ != !row->is_long)
         reason = "Signal has priority";
       if(reason.empty()) {
@@ -806,7 +925,6 @@ public:
                                      asset_snapshot[1],
                                      context,
                                      current_drawdown_ratio)) {
-          self.pending_entries_.fill(false);
           return;
         }
       } else
@@ -821,12 +939,12 @@ public:
     }
     if(self.strategy_trade_session_.is_flat()) {
       self.execute_pending_entry(asset_snapshot.open(),
+                                 pending_entries,
                                  decision_snapshot,
                                  context,
                                  current_drawdown_ratio,
                                  self.closed_position_is_long_);
     }
-    self.pending_entries_.fill(false);
   }
 
   void
@@ -863,12 +981,7 @@ public:
 
   void run_intrabar(this BacktestRunner& self, IntrabarPath path)
   {
-    const auto& asset_snapshot = *self.active_snapshot_;
-    const auto prices = make_intrabar_prices(path,
-                                             asset_snapshot.open(),
-                                             asset_snapshot.high(),
-                                             asset_snapshot.low(),
-                                             asset_snapshot.close());
+    const auto prices = self.intrabar_prices(path);
     for(auto setup = std::size_t{}; setup < self.strategy_count(); ++setup) {
       self.activate_strategy(setup);
       for(auto index = std::size_t{1}; index < prices.size(); ++index) {
@@ -878,13 +991,190 @@ public:
     }
   }
 
+  auto intrabar_prices(this const BacktestRunner& self,
+                       IntrabarPath path) noexcept -> IntrabarPrices
+  {
+    const auto bar = *self.active_snapshot_;
+    return make_intrabar_prices(
+     path, bar.open(), bar.high(), bar.low(), bar.close());
+  }
+
+  auto price_at_progress(this const BacktestRunner& self,
+                         IntrabarPath path,
+                         double progress) noexcept -> double
+  {
+    const auto prices = self.intrabar_prices(path);
+    if(progress == 3.0) {
+      return prices.back();
+    }
+    for(const auto& setup : self.entry_touches_) {
+      for(const auto& touch : setup) {
+        if(touch && touch->progress == progress) {
+          return touch->price;
+        }
+      }
+    }
+    for(const auto& setup : self.position_touches_) {
+      if(setup.pyramid && setup.pyramid->progress == progress) {
+        return setup.pyramid->price;
+      }
+      for(const auto& [index, touch] : setup.exits) {
+        if(touch.progress == progress) {
+          return touch.price;
+        }
+      }
+    }
+    const auto leg = static_cast<std::size_t>(progress);
+    return std::lerp(
+     prices[leg], prices[leg + 1], progress - static_cast<double>(leg));
+  }
+
+  auto next_signal_checkpoint(this const BacktestRunner& self,
+                              double previous,
+                              double next) noexcept -> double
+  {
+    const auto consider = [&](const SignalTouch& touch) {
+      if(touch.progress > previous && touch.progress < next) {
+        next = touch.progress;
+      }
+    };
+    for(const auto& setup : self.entry_touches_) {
+      for(const auto& touch : setup) {
+        if(touch)
+          consider(*touch);
+      }
+    }
+    for(const auto& setup : self.position_touches_) {
+      if(setup.pyramid)
+        consider(*setup.pyramid);
+      for(const auto& [index, touch] : setup.exits) {
+        consider(touch);
+      }
+    }
+    return next;
+  }
+
+  void run_intrabar_segment(this BacktestRunner& self, double start, double end)
+  {
+    for(std::size_t setup = 0; setup < self.strategy_count(); ++setup) {
+      self.activate_strategy(setup);
+      self.process_price_segment(start, end, self.closed_position_is_long_);
+    }
+  }
+
+  auto uses_intrabar_orders(this const BacktestRunner& self) noexcept -> bool
+  {
+    return self.uses_intrabar_orders_;
+  }
+
+  void prepare_signal_candidates(
+   this BacktestRunner& self,
+   std::vector<SeriesEvaluationResults>& setup_series_results,
+   IntrabarPath path)
+  {
+    if(!self.uses_intrabar_orders()) {
+      return;
+    }
+    self.validate_setup_result_count(setup_series_results);
+    for(std::size_t index = 0; index < self.strategy_count(); ++index) {
+      self.activate_strategy(index);
+      self.prepare_entry_candidates(setup_series_results[index], path);
+      self.prepare_position_candidates(setup_series_results[index], path, 0.0);
+    }
+  }
+
+  void
+  prepare_position_candidates(this BacktestRunner& self,
+                              std::vector<SeriesEvaluationResults>& results,
+                              IntrabarPath path,
+                              double progress)
+  {
+    for(std::size_t index = 0; index < self.strategy_count(); ++index) {
+      self.activate_strategy(index);
+      self.prepare_position_candidates(results[index], path, progress);
+    }
+  }
+
+  void run_touch_exits(this BacktestRunner& self,
+                       double progress,
+                       double price,
+                       IntrabarPath path,
+                       bool include_open_exits = false)
+  {
+    for(std::size_t index = 0; index < self.strategy_count(); ++index) {
+      self.activate_strategy(index);
+      auto& touches = self.position_touches_[index];
+      if(!self.strategy_trade_session_.open_position()) {
+        continue;
+      }
+      const auto& position = *self.strategy_trade_session_.open_position();
+      auto fills = std::vector<std::pair<std::size_t, std::optional<double>>>{};
+      if(include_open_exits) {
+        for(const auto exit : self.open_signal_exit_indices(position)) {
+          fills.emplace_back(exit, std::nullopt);
+        }
+      }
+      if(touches.trade_id == position.trade_id()) {
+        std::erase_if(touches.exits, [&](const auto& exit) {
+          if(exit.second.progress != progress) {
+            return false;
+          }
+          fills.emplace_back(exit.first, exit.second.price);
+          return true;
+        });
+      }
+      std::ranges::sort(fills, {}, [](const auto& fill) { return fill.first; });
+      const auto& rule = position.is_long_direction() ? self.long_position_
+                                                      : self.short_position_;
+      for(const auto& [exit, touch_price] : fills) {
+        const auto& open = self.strategy_trade_session_.open_position();
+        if(!open) {
+          break;
+        }
+        if(touch_price && open->signal_exit_states()[exit].active() &&
+           !self.signal_exit_is_eligible(*open, rule, exit) &&
+           !series_method_cast<OpenMethod>(
+            rule.signal_exits()[exit].order().price)) {
+          if(const auto later = first_touch(self.intrabar_prices(path),
+                                            *touch_price,
+                                            progress,
+                                            *touch_price,
+                                            false)) {
+            touches.exits.emplace_back(exit, *later);
+          }
+          continue;
+        }
+        self.execute_signal_exit(
+         exit, touch_price.value_or(price), self.closed_position_is_long_);
+      }
+    }
+  }
+
+  auto discover_touch_requested_order(
+   this BacktestRunner& self,
+   std::vector<SeriesEvaluationResults>& setup_series_results,
+   double progress,
+   bool initial_allowed = true) -> std::optional<RequestedOrderAction>
+  {
+    self.validate_setup_result_count(setup_series_results);
+    self.entry_admission_open_ = self.execution_session_.is_flat();
+    self.entry_discovery_mode_ = true;
+    self.discovered_requested_order_.reset();
+    for(std::size_t index = 0; index < self.strategy_count(); ++index) {
+      self.activate_strategy(index);
+      self.run_touch_entries(
+       setup_series_results[index], progress, initial_allowed);
+    }
+    self.entry_discovery_mode_ = false;
+    return std::exchange(self.discovered_requested_order_, std::nullopt);
+  }
+
   void run_close_exits(this BacktestRunner& self,
                        SeriesEvaluationResults& series_evaluation_results)
   {
     const auto asset_snapshot = *self.active_snapshot_;
     auto context = self.make_context(series_evaluation_results);
-    self.execute_signal_exits(SignalTiming::CurrentClose,
-                              asset_snapshot.close(),
+    self.execute_signal_exits(asset_snapshot.close(),
                               asset_snapshot,
                               context,
                               self.closed_position_is_long_);
@@ -916,12 +1206,15 @@ public:
                                                       : self.short_position_;
       const auto position_context =
        self.with_open_position_context(context, position);
-      if(rule.pyramiding_timing() == SignalTiming::CurrentClose &&
-         !self.pyramiding_is_paused() &&
-         self.pyramiding_signal_triggered(
-          rule, asset_snapshot, position_context)) {
+      const auto& order = rule.pyramiding_order();
+      if(order.at_close() && !self.pyramiding_is_paused() &&
+         (order.delay == 0 ? self.pyramiding_signal_triggered(
+                              rule, asset_snapshot, position_context)
+                           : self.pyramid_is_due())) {
         self.execute_pyramiding_action(
          asset_snapshot.close(), asset_snapshot, context);
+      } else {
+        self.run_touch_pyramid(3.0, asset_snapshot, context);
       }
     }
 
@@ -1029,14 +1322,7 @@ public:
     self.current_strategy_timeline_states_.resize(self.strategy_count());
     const auto asset_snapshot = *self.active_snapshot_;
     auto context = self.make_context(series_evaluation_results);
-    if(self.active_timeline_index_ + 1 < self.asset_.size()) {
-      self.schedule_next_open_actions(asset_snapshot, context);
-    } else {
-      self.pending_entries_.fill(false);
-      self.pending_pyramiding_ = false;
-      self.pending_signal_exit_indices_.clear();
-      self.pending_signal_exit_trade_id_.reset();
-    }
+    self.record_signals(asset_snapshot, context);
 
     self.current_strategy_timeline_states_[0] =
        StrategyTimelineState{self.strategy_session_.intents(),
@@ -1091,14 +1377,7 @@ public:
     for(auto index = std::size_t{1}; index < self.strategy_count(); ++index) {
       self.activate_strategy(index);
       auto context = self.make_context(setup_series_results[index]);
-      if(self.active_timeline_index_ + 1 < self.asset_.size()) {
-        self.schedule_next_open_actions(asset_snapshot, context);
-      } else {
-        self.pending_entries_.fill(false);
-        self.pending_pyramiding_ = false;
-        self.pending_signal_exit_indices_.clear();
-        self.pending_signal_exit_trade_id_.reset();
-      }
+      self.record_signals(asset_snapshot, context);
       self.store_named_series(
        asset_snapshot, context, setup_series_results[index]);
       self.current_strategy_timeline_states_[index] =
@@ -1113,6 +1392,293 @@ public:
   }
 
 private:
+  // Due bars belong to the current position and are discarded when it closes.
+  struct PositionSignals {
+    std::vector<std::size_t> exits;
+    bool pyramid{};
+  };
+
+  auto position_signals_due(this const BacktestRunner& self) noexcept
+   -> const PositionSignals*
+  {
+    const auto it = self.position_signals_.find(self.active_timeline_index_);
+    return it == self.position_signals_.end() ? nullptr : &it->second;
+  }
+
+  auto pyramid_is_due(this const BacktestRunner& self) noexcept -> bool
+  {
+    const auto* due = self.position_signals_due();
+    return due && due->pyramid;
+  }
+
+  static auto is_custom_entry(const PositionRule& rule) noexcept -> bool
+  {
+    return rule.entry_source() == EntrySource::Signal &&
+           rule.entry_order().uses_touch();
+  }
+
+  static auto uses_touch_orders(const PositionRule& rule) noexcept -> bool
+  {
+    return is_custom_entry(rule) ||
+           (rule.pyramiding_max_layers() > 1 &&
+            rule.pyramiding_order().uses_touch()) ||
+           std::ranges::any_of(rule.signal_exits(), [](const auto& exit) {
+             return exit.enabled() && exit.order().uses_touch();
+           });
+  }
+
+  auto historical_signal(this const BacktestRunner& self,
+                         const PositionRule& rule,
+                         std::size_t side) noexcept -> bool
+  {
+    const auto delay = rule.entry_order().delay;
+    const auto& history = self.entry_signal_history_[side];
+    return delay > 0 && delay <= history.size() &&
+           history[history.size() - delay];
+  }
+
+  auto has_touch(this const BacktestRunner& self,
+                 std::size_t side,
+                 double progress) noexcept -> bool
+  {
+    const auto& touch =
+     self.entry_touches_[self.active_strategy_index_.value_or(0)][side];
+    return touch && touch->progress == progress;
+  }
+
+  auto is_open_signal(this const BacktestRunner& self,
+                      const PositionRule& rule,
+                      std::size_t side) noexcept -> bool
+  {
+    return self.has_touch(side, 0.0) ||
+           (rule.entry_source() == EntrySource::Signal &&
+            rule.entry_order().at_open() && self.historical_signal(rule, side));
+  }
+
+  static auto first_touch(const IntrabarPrices& prices,
+                          double price,
+                          double start_progress,
+                          double start_price,
+                          bool include_start = true) noexcept
+   -> std::optional<SignalTouch>
+  {
+    if(!std::isfinite(price)) {
+      return std::nullopt;
+    }
+    if(include_start && start_price == price) {
+      return SignalTouch{start_progress, price};
+    }
+    for(auto leg = static_cast<std::size_t>(start_progress);
+        leg + 1 < prices.size();
+        ++leg) {
+      const auto end = prices[leg + 1];
+      const auto [low, high] = std::minmax(start_price, end);
+      if(start_price != end && low <= price && price <= high) {
+        const auto progress =
+         static_cast<double>(leg) + (price - prices[leg]) / (end - prices[leg]);
+        if(include_start || progress > start_progress) {
+          return SignalTouch{std::max(start_progress, progress), price};
+        }
+      }
+      start_price = end;
+    }
+    return std::nullopt;
+  }
+
+  void prepare_entry_candidates(this BacktestRunner& self,
+                                SeriesEvaluationResults& committed_results,
+                                IntrabarPath path)
+  {
+    if(!self.uses_intrabar_orders()) {
+      return;
+    }
+    const auto candle = *self.active_snapshot_;
+    const auto prices = self.intrabar_prices(path);
+    const auto account = self.current_account_state_;
+    auto context = BacktestMethodContext{self.series_methods_,
+                                         committed_results,
+                                         candle.index(),
+                                         account,
+                                         self.pyramiding_layers_,
+                                         self.position_call(),
+                                         nullptr,
+                                         self.external_data_.get(),
+                                         &self.retrospective_cache_};
+    auto& touches =
+     self.entry_touches_[self.active_strategy_index_.value_or(0)];
+    const auto prepare = [&](std::size_t side, const PositionRule& rule) {
+      if(!is_custom_entry(rule) ||
+         !(rule.entry_order().delay == 0
+            ? evaluate_signal_method(rule.entry_method(), candle, context)
+            : self.historical_signal(rule, side))) {
+        return;
+      }
+      const auto price =
+       evaluate_series_method(rule.entry_order().price, candle, context);
+      if(price > 0.0 && candle.low() <= price && price <= candle.high()) {
+        touches[side] = first_touch(prices, price, 0.0, prices.front());
+      }
+    };
+    prepare(0, self.long_position_);
+    prepare(1, self.short_position_);
+  }
+
+  void prepare_position_candidates(this BacktestRunner& self,
+                                   SeriesEvaluationResults& results,
+                                   IntrabarPath path,
+                                   double progress)
+  {
+    auto& touches =
+     self.position_touches_[self.active_strategy_index_.value_or(0)];
+    const auto& position = self.strategy_trade_session_.open_position();
+    if(!position) {
+      touches = {};
+      return;
+    }
+    if(touches.trade_id == position->trade_id()) {
+      return;
+    }
+    // A new position's own signals can only act on the path from its fill.
+    touches = {};
+    touches.trade_id = position->trade_id();
+    const auto& rule =
+     position->is_long_direction() ? self.long_position_ : self.short_position_;
+    const auto candle = *self.active_snapshot_;
+    const auto prices = self.intrabar_prices(path);
+    const auto start_price = self.current_market_price();
+    const auto account = self.current_account_state_;
+    auto cache = SeriesEvaluationResults{};
+    auto context = self.with_open_position_context(
+     BacktestMethodContext{self.series_methods_,
+                           results,
+                           candle.index(),
+                           account,
+                           self.pyramiding_layers_,
+                           self.position_call(),
+                           nullptr,
+                           self.external_data_.get(),
+                           &cache},
+     *position);
+    const auto* due = self.position_signals_due();
+    const auto locate =
+     [&](const PositionRule::SignalOrder& order) -> std::optional<SignalTouch> {
+      if(progress > 0.0 && series_method_cast<OpenMethod>(order.price)) {
+        return std::nullopt;
+      }
+      const auto price = evaluate_series_method(order.price, candle, context);
+      return candle.low() <= price && price <= candle.high()
+              ? first_touch(prices, price, progress, start_price)
+              : std::nullopt;
+    };
+    for(std::size_t index = 0; index < rule.signal_exits().size(); ++index) {
+      const auto& exit = rule.signal_exits()[index];
+      const auto& order = exit.order();
+      if(exit.enabled() && order.uses_touch() &&
+         index < position->signal_exit_states().size() &&
+         !position->signal_exit_states()[index].consumed() &&
+         (order.delay == 0
+           ? evaluate_signal_method(exit.signal_method(), candle, context)
+           : (due &&
+              std::ranges::find(due->exits, index) != due->exits.end()))) {
+        if(const auto touch = locate(order)) {
+          touches.exits.emplace_back(index, *touch);
+        }
+      }
+    }
+    const auto& pyramid = rule.pyramiding_order();
+    if(pyramid.uses_touch() && rule.pyramiding_max_layers() > 1 &&
+       !self.pyramiding_is_paused() &&
+       (pyramid.delay == 0
+         ? self.pyramiding_signal_triggered(rule, candle, context)
+         : self.pyramid_is_due())) {
+      const auto touch = locate(pyramid);
+      if(touch && touch->price > 0.0) {
+        touches.pyramid = touch;
+      }
+    }
+  }
+
+  void run_touch_pyramid(this BacktestRunner& self,
+                         double progress,
+                         const AssetSnapshot& evaluation,
+                         BacktestMethodContext context)
+  {
+    auto& touches =
+     self.position_touches_[self.active_strategy_index_.value_or(0)];
+    const auto& position = self.strategy_trade_session_.open_position();
+    if(position && touches.trade_id == position->trade_id() &&
+       touches.pyramid && touches.pyramid->progress == progress) {
+      const auto price = touches.pyramid->price;
+      touches.pyramid.reset();
+      if(!self.pyramiding_is_paused()) {
+        self.execute_pyramiding_action(price, evaluation, context);
+      }
+    }
+  }
+
+  void run_touch_entries(this BacktestRunner& self,
+                         SeriesEvaluationResults& results,
+                         double progress,
+                         bool initial_allowed)
+  {
+    auto context = self.make_context(results);
+    const auto evaluation = (*self.active_snapshot_)[1];
+    if(!self.strategy_trade_session_.is_flat()) {
+      self.run_touch_pyramid(progress, evaluation, context);
+      return;
+    }
+    if(!initial_allowed) {
+      return;
+    }
+    const auto drawdown = self.current_account_state_.drawdown_ratio();
+    const auto& touches =
+     self.entry_touches_[self.active_strategy_index_.value_or(0)];
+    if(self.has_touch(0, progress) && self.closed_position_is_long_ != true &&
+       self.execute_entry_action(
+        true, touches[0]->price, evaluation, context, drawdown)) {
+      return;
+    }
+    if(self.has_touch(1, progress) && self.closed_position_is_long_ != false) {
+      self.execute_entry_action(
+       false, touches[1]->price, evaluation, context, drawdown);
+    }
+  }
+
+  void run_signal_path(this BacktestRunner& self, auto prepare, auto admit)
+  {
+    if(!self.uses_intrabar_orders()) {
+      self.run_intrabar();
+      return;
+    }
+    const auto after_entry = [&](double progress, double price) {
+      self.run_intrabar_segment(price, price);
+      self.settle_portfolio_account();
+      prepare(progress);
+      self.run_touch_exits(progress, price, self.intrabar_path_);
+      self.settle_portfolio_account();
+      admit(progress, false);
+    };
+    auto start = self.active_snapshot_->open();
+    after_entry(0.0, start);
+    auto previous = 0.0;
+    while(previous < 3.0) {
+      const auto progress =
+       self.next_signal_checkpoint(previous, std::floor(previous) + 1.0);
+      const auto end = self.price_at_progress(self.intrabar_path_, progress);
+      self.run_intrabar_segment(start, end);
+      self.mark_bar_price(end);
+      self.settle_portfolio_account();
+      if(progress < 3.0) {
+        self.run_touch_exits(progress, end, self.intrabar_path_);
+        self.settle_portfolio_account();
+        admit(progress, true);
+        after_entry(progress, end);
+      }
+      previous = progress;
+      start = end;
+    }
+  }
+
   void store_named_series(this const BacktestRunner& self,
                           AssetSnapshot snapshot,
                           BacktestMethodContext context,
@@ -1160,12 +1726,12 @@ private:
     std::size_t pyramiding_layers{};
     AlternateStrategyActivation alternate_activation{
      AlternateStrategyActivation::Always};
-    std::array<bool, 2> pending_entries{};
-    bool pending_pyramiding{};
+    std::array<std::vector<bool>, 2> entry_signal_history;
+    std::size_t price_exits_start_bar{};
+    SeriesEvaluationResults retrospective_cache;
+    std::map<std::size_t, PositionSignals> position_signals;
     bool pyramiding_signal_ready{true};
     std::optional<std::size_t> pyramiding_resume_index;
-    std::vector<std::size_t> pending_signal_exit_indices;
-    std::optional<std::size_t> pending_signal_exit_trade_id;
     std::optional<std::size_t> execution_strategy_trade_id;
     std::optional<std::size_t> entry_filtered_strategy_trade_id;
     std::optional<bool> closed_position_is_long;
@@ -1183,13 +1749,12 @@ private:
     swap(self.long_position_, state.long_position);
     swap(self.short_position_, state.short_position);
     swap(self.pyramiding_layers_, state.pyramiding_layers);
-    swap(self.pending_entries_, state.pending_entries);
-    swap(self.pending_pyramiding_, state.pending_pyramiding);
+    swap(self.entry_signal_history_, state.entry_signal_history);
+    swap(self.price_exits_start_bar_, state.price_exits_start_bar);
+    swap(self.retrospective_cache_, state.retrospective_cache);
+    swap(self.position_signals_, state.position_signals);
     swap(self.pyramiding_signal_ready_, state.pyramiding_signal_ready);
     swap(self.pyramiding_resume_index_, state.pyramiding_resume_index);
-    swap(self.pending_signal_exit_indices_, state.pending_signal_exit_indices);
-    swap(self.pending_signal_exit_trade_id_,
-         state.pending_signal_exit_trade_id);
     swap(self.execution_strategy_trade_id_, state.execution_strategy_trade_id);
     swap(self.entry_filtered_strategy_trade_id_,
          state.entry_filtered_strategy_trade_id);
@@ -1266,6 +1831,7 @@ private:
   std::vector<StrategyState> strategy_states_;
   bool entry_admission_open_{};
   bool uses_calls_{};
+  bool uses_intrabar_orders_{};
   bool entry_discovery_mode_{};
   const RequestedOrder* requested_order_preapproved_{};
   const PositionSizingDecision* requested_order_decision_preapproved_{};
@@ -1284,12 +1850,14 @@ private:
   bool is_failed_;
   IntrabarPath intrabar_path_{IntrabarPath::CandleDirection};
 
-  std::array<bool, 2> pending_entries_{};
-  bool pending_pyramiding_{};
+  std::vector<std::array<std::optional<SignalTouch>, 2>> entry_touches_;
+  std::vector<PositionTouches> position_touches_;
+  std::array<std::vector<bool>, 2> entry_signal_history_;
+  std::size_t price_exits_start_bar_{};
+  SeriesEvaluationResults retrospective_cache_;
+  std::map<std::size_t, PositionSignals> position_signals_;
   bool pyramiding_signal_ready_{true};
   std::optional<std::size_t> pyramiding_resume_index_;
-  std::vector<std::size_t> pending_signal_exit_indices_;
-  std::optional<std::size_t> pending_signal_exit_trade_id_;
 
   struct PriceExitTrigger {
     TradeExit::Reason reason;
@@ -2010,6 +2578,7 @@ private:
 
   void reset_pyramiding_campaign(this BacktestRunner& self) noexcept
   {
+    self.position_signals_.clear();
     self.pyramiding_layers_ = 0;
     self.pyramiding_signal_ready_ = true;
     self.pyramiding_resume_index_.reset();
@@ -2304,6 +2873,9 @@ private:
                           double open,
                           std::optional<bool>& closed_position_is_long) -> bool
   {
+    if(self.active_timeline_index_ < self.price_exits_start_bar_) {
+      return false;
+    }
     auto filled = false;
     while(const auto trigger = self.immediate_price_exit(open)) {
       filled =
@@ -2321,6 +2893,9 @@ private:
                              double end,
                              std::optional<bool>& closed_position_is_long)
   {
+    if(self.active_timeline_index_ < self.price_exits_start_bar_) {
+      return;
+    }
     auto current = start;
     while(self.strategy_trade_session_.is_open()) {
       self.activate_trailing_stops(current);
@@ -2339,75 +2914,82 @@ private:
     }
   }
 
-  auto execute_signal_exit_indices(this BacktestRunner& self,
-                                   const std::vector<std::size_t>& indices,
-                                   double price,
-                                   std::optional<bool>& closed_position_is_long)
-   -> bool
+  auto execute_signal_exit(this BacktestRunner& self,
+                           std::size_t index,
+                           double price,
+                           std::optional<bool>& closed_position_is_long) -> bool
   {
-    auto filled = false;
-    for(const auto index : indices) {
-      if(!self.strategy_trade_session_.open_position()) {
-        break;
-      }
-      const auto& position = *self.strategy_trade_session_.open_position();
-      const auto was_long = position.is_long_direction();
-      const auto& rule = was_long ? self.long_position_ : self.short_position_;
-      if(index >= rule.signal_exits().size() ||
-         !self.signal_exit_is_eligible(position, rule, index)) {
-        continue;
-      }
-      const auto reduce = rule.signal_exits()[index].reduce();
-      auto exit = self.make_strategy_exit_trade(position.position_size(),
-                                                price,
-                                                TradeExit::Reason::signal,
-                                                reduce,
-                                                std::nullopt,
-                                                std::nullopt,
-                                                index);
-      if(!exit) {
-        continue;
-      }
-      self.strategy_trade_session_.exit_position(*exit);
-      self.record_strategy_exit(
-       TradeExit::Reason::signal, price, reduce, index);
-      self.mirror_execution_exit(price,
-                                 TradeExit::Reason::signal,
-                                 reduce,
-                                 std::nullopt,
-                                 std::nullopt,
-                                 index);
-      filled = true;
-      if(self.strategy_trade_session_.is_flat()) {
-        closed_position_is_long = was_long;
-        self.reset_pyramiding_campaign();
-      }
+    const auto& position = self.strategy_trade_session_.open_position();
+    if(!position) {
+      return false;
     }
-    return filled;
+    const auto was_long = position->is_long_direction();
+    const auto& rule = was_long ? self.long_position_ : self.short_position_;
+    if(index >= rule.signal_exits().size() ||
+       !self.signal_exit_is_eligible(*position, rule, index)) {
+      return false;
+    }
+    const auto reduce = rule.signal_exits()[index].reduce();
+    const auto exit = self.make_strategy_exit_trade(position->position_size(),
+                                                    price,
+                                                    TradeExit::Reason::signal,
+                                                    reduce,
+                                                    std::nullopt,
+                                                    std::nullopt,
+                                                    index);
+    if(!exit) {
+      return false;
+    }
+    self.strategy_trade_session_.exit_position(*exit);
+    self.record_strategy_exit(TradeExit::Reason::signal, price, reduce, index);
+    self.mirror_execution_exit(price,
+                               TradeExit::Reason::signal,
+                               reduce,
+                               std::nullopt,
+                               std::nullopt,
+                               index);
+    if(self.strategy_trade_session_.is_flat()) {
+      closed_position_is_long = was_long;
+      self.reset_pyramiding_campaign();
+    }
+    return true;
   }
 
-  auto
+  auto open_signal_exit_indices(this const BacktestRunner& self,
+                                const TradePosition& position)
+   -> std::vector<std::size_t>
+  {
+    const auto* due = self.position_signals_due();
+    auto indices = std::vector<std::size_t>{};
+    if(due) {
+      const auto& rule = position.is_long_direction() ? self.long_position_
+                                                      : self.short_position_;
+      for(const auto index : due->exits) {
+        if(rule.signal_exits()[index].order().at_open()) {
+          indices.push_back(index);
+        }
+      }
+    }
+    return indices;
+  }
+
+  void
   execute_pending_signal_exits(this BacktestRunner& self,
                                double price,
                                std::optional<bool>& closed_position_is_long)
-   -> bool
   {
-    auto valid = self.strategy_trade_session_.open_position() &&
-                 self.pending_signal_exit_trade_id_ &&
-                 self.strategy_trade_session_.open_position()->trade_id() ==
-                  *self.pending_signal_exit_trade_id_;
-    auto filled = false;
-    if(valid) {
-      filled = self.execute_signal_exit_indices(
-       self.pending_signal_exit_indices_, price, closed_position_is_long);
+    const auto& position = self.strategy_trade_session_.open_position();
+    if(!position) {
+      return;
     }
-    self.pending_signal_exit_indices_.clear();
-    self.pending_signal_exit_trade_id_.reset();
-    return filled;
+    auto indices = self.open_signal_exit_indices(*position);
+    std::ranges::sort(indices);
+    for(const auto index : indices) {
+      self.execute_signal_exit(index, price, closed_position_is_long);
+    }
   }
 
   auto execute_signal_exits(this BacktestRunner& self,
-                            SignalTiming timing,
                             double price,
                             const AssetSnapshot& snapshot,
                             BacktestMethodContext context,
@@ -2422,21 +3004,44 @@ private:
      position.is_long_direction() ? self.long_position_ : self.short_position_;
     const auto position_context =
      self.with_open_position_context(context, position);
-    auto indices = std::vector<std::size_t>{};
+    const auto* due = self.position_signals_due();
+    const auto& touches =
+     self.position_touches_[self.active_strategy_index_.value_or(0)];
+    auto fills = std::vector<std::pair<std::size_t, double>>{};
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
       const auto& signal_exit = rule.signal_exits()[index];
-      if(signal_exit.timing() == timing &&
-         index < position.signal_exit_states().size() &&
-         position.signal_exit_states()[index].enabled() &&
-         !position.signal_exit_states()[index].consumed() &&
-         evaluate_signal_method(
-          signal_exit.signal_method(), snapshot, position_context)) {
-        indices.push_back(index);
+      const auto& order = signal_exit.order();
+      if(index >= position.signal_exit_states().size() ||
+         !position.signal_exit_states()[index].enabled() ||
+         position.signal_exit_states()[index].consumed()) {
+        continue;
+      }
+      const auto close_signal =
+       order.at_close() &&
+       (order.delay == 0
+         ? evaluate_signal_method(
+            signal_exit.signal_method(), snapshot, position_context)
+         : (due && std::ranges::find(due->exits, index) != due->exits.end()));
+      if(close_signal) {
+        fills.emplace_back(index, price);
+      } else if(touches.trade_id == position.trade_id()) {
+        const auto touch =
+         std::ranges::find_if(touches.exits, [&](const auto& event) {
+           return event.first == index && event.second.progress == 3.0;
+         });
+        if(touch != touches.exits.end()) {
+          fills.emplace_back(index, touch->second.price);
+        }
       }
     }
-    return self.execute_signal_exit_indices(
-     indices, price, closed_position_is_long);
+    auto filled = false;
+    for(const auto& [index, fill_price] : fills) {
+      filled =
+       self.execute_signal_exit(index, fill_price, closed_position_is_long) ||
+       filled;
+    }
+    return filled;
   }
 
   auto commit_strategy_entry(this BacktestRunner& self,
@@ -2450,6 +3055,11 @@ private:
   {
     if(!is_pyramiding) {
       self.pyramiding_signal_ready_ = true;
+      self.position_signals_.clear();
+      self.price_exits_start_bar_ =
+       self.active_timeline_index_ +
+       (rule.entry_source() == EntrySource::Signal &&
+        rule.price_exits_start() == PriceExitsStart::NextBar);
     }
     const auto strategy_entry = TradeEntry{is_long ? 1.0 : -1.0, price};
     self.strategy_trade_session_.entry_position(strategy_entry);
@@ -2766,18 +3376,19 @@ private:
 
   void execute_pending_entry(this BacktestRunner& self,
                              double price,
+                             const std::array<bool, 2>& pending_entries,
                              const AssetSnapshot& evaluation_snapshot,
                              BacktestMethodContext context,
                              double current_drawdown_ratio,
                              std::optional<bool> closed_position_is_long)
   {
-    if(self.pending_entries_[0] &&
+    if(pending_entries[0] &&
        (!closed_position_is_long || !*closed_position_is_long) &&
        self.execute_entry_action(
         true, price, evaluation_snapshot, context, current_drawdown_ratio)) {
       return;
     }
-    if(self.pending_entries_[1] &&
+    if(pending_entries[1] &&
        (!closed_position_is_long || *closed_position_is_long)) {
       self.execute_entry_action(
        false, price, evaluation_snapshot, context, current_drawdown_ratio);
@@ -2791,42 +3402,47 @@ private:
                                    double current_drawdown_ratio,
                                    std::optional<bool> closed_position_is_long)
   {
-    const auto can_enter = [&](const PositionRule& rule) {
-      return rule.entry_source() == EntrySource::Signal &&
-             rule.entry_timing() == SignalTiming::CurrentClose &&
-             evaluate_signal_method(rule.entry_method(), snapshot, context);
+    const auto can_enter = [&](const PositionRule& rule, std::size_t side) {
+      return self.has_touch(side, 3.0) ||
+             (rule.entry_source() == EntrySource::Signal &&
+              rule.entry_order().at_close() &&
+              (rule.entry_order().delay == 0
+                ? evaluate_signal_method(rule.entry_method(), snapshot, context)
+                : self.historical_signal(rule, side)));
     };
     if((!closed_position_is_long || !*closed_position_is_long) &&
-       can_enter(self.long_position_) &&
+       can_enter(self.long_position_, 0) &&
        self.execute_entry_action(
         true, price, snapshot, context, current_drawdown_ratio)) {
       return;
     }
     if((!closed_position_is_long || *closed_position_is_long) &&
-       can_enter(self.short_position_)) {
+       can_enter(self.short_position_, 1)) {
       self.execute_entry_action(
        false, price, snapshot, context, current_drawdown_ratio);
     }
   }
 
-  void schedule_next_open_actions(this BacktestRunner& self,
-                                  const AssetSnapshot& snapshot,
-                                  BacktestMethodContext context)
+  void record_signals(this BacktestRunner& self,
+                      const AssetSnapshot& snapshot,
+                      BacktestMethodContext context)
   {
-    self.pending_entries_[0] =
-     self.long_position_.entry_source() == EntrySource::Signal &&
-     self.long_position_.entry_timing() == SignalTiming::NextOpen &&
-     evaluate_signal_method(
-      self.long_position_.entry_method(), snapshot, context);
-    self.pending_entries_[1] =
-     self.short_position_.entry_source() == EntrySource::Signal &&
-     self.short_position_.entry_timing() == SignalTiming::NextOpen &&
-     evaluate_signal_method(
-      self.short_position_.entry_method(), snapshot, context);
+    self.position_signals_.erase(self.active_timeline_index_);
+    const auto delay_fits = [&](std::size_t delay) {
+      return delay > 0 &&
+             delay < self.asset_.size() - self.active_timeline_index_;
+    };
+    const auto record_signal = [&](std::size_t side, const PositionRule& rule) {
+      if(rule.entry_source() == EntrySource::Signal &&
+         rule.entry_order().delay > 0) {
+        self.entry_signal_history_[side].push_back(
+         self.active_timeline_index_ + 1 < self.asset_.size() &&
+         evaluate_signal_method(rule.entry_method(), snapshot, context));
+      }
+    };
+    record_signal(0, self.long_position_);
+    record_signal(1, self.short_position_);
 
-    self.pending_pyramiding_ = false;
-    self.pending_signal_exit_indices_.clear();
-    self.pending_signal_exit_trade_id_.reset();
     if(!self.strategy_trade_session_.open_position()) {
       self.pyramiding_signal_ready_ = true;
       self.pyramiding_resume_index_.reset();
@@ -2837,24 +3453,24 @@ private:
      position.is_long_direction() ? self.long_position_ : self.short_position_;
     const auto position_context =
      self.with_open_position_context(context, position);
-    self.pending_pyramiding_ =
-     rule.pyramiding_timing() == SignalTiming::NextOpen &&
-     !self.pyramiding_is_paused() &&
-     self.pyramiding_signal_triggered(rule, snapshot, position_context);
+    const auto pyramid_delay = rule.pyramiding_order().delay;
+    if(delay_fits(pyramid_delay) && !self.pyramiding_is_paused() &&
+       self.pyramiding_signal_triggered(rule, snapshot, position_context)) {
+      self.position_signals_[self.active_timeline_index_ + pyramid_delay]
+       .pyramid = true;
+    }
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
       const auto& signal_exit = rule.signal_exits()[index];
-      if(signal_exit.timing() == SignalTiming::NextOpen &&
-         index < position.signal_exit_states().size() &&
+      const auto delay = signal_exit.order().delay;
+      if(delay_fits(delay) && index < position.signal_exit_states().size() &&
          position.signal_exit_states()[index].enabled() &&
          !position.signal_exit_states()[index].consumed() &&
          evaluate_signal_method(
           signal_exit.signal_method(), snapshot, position_context)) {
-        self.pending_signal_exit_indices_.push_back(index);
+        self.position_signals_[self.active_timeline_index_ + delay]
+         .exits.push_back(index);
       }
-    }
-    if(!self.pending_signal_exit_indices_.empty()) {
-      self.pending_signal_exit_trade_id_ = position.trade_id();
     }
   }
 };

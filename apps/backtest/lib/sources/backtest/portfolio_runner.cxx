@@ -83,6 +83,10 @@ public:
     }
     uses_calls_ = std::ranges::any_of(
      backtests_, [](const auto& run) { return run.runner().uses_calls(); });
+    uses_intrabar_orders_ =
+     std::ranges::any_of(backtests_, [](const auto& run) {
+       return run.runner().uses_intrabar_orders();
+     });
     self_validate_assets();
     total_timestamps_ = collect_timestamps().size();
   }
@@ -141,6 +145,7 @@ public:
       return;
     }
 
+    const auto mark_at_open = self.uses_calls_ || self.uses_intrabar_orders_;
     auto active = std::vector<std::size_t>{};
     for(auto index = std::size_t{}; index < self.backtests_.size(); ++index) {
       auto& backtest = self.backtests_[index];
@@ -153,9 +158,9 @@ public:
       if(snapshot.datetime() != next_timestamp) {
         continue;
       }
-      if(!self.uses_calls_)
+      if(!mark_at_open)
         self.sync_backtest(backtest.runner());
-      if(backtest.runner().begin_bar(result.timeline(), self.uses_calls_)) {
+      if(backtest.runner().begin_bar(result.timeline(), mark_at_open)) {
         active.push_back(index);
       }
     }
@@ -168,10 +173,10 @@ public:
         events.push_back({index, bar, event});
       }
     };
-    const auto run_exit_phase = [&](auto action) {
+    const auto run_exit_phase = [&](auto action, bool update_peak = true) {
       for(const auto index : active) {
         auto& runner = self.backtests_[index].runner();
-        self.sync_backtest(runner);
+        self.sync_backtest(runner, update_peak);
         const auto capital_before = self.account_.capital();
         const auto first = runner.current_bar_event_count();
         action(runner, results.backtests()[index]);
@@ -221,16 +226,94 @@ public:
       }
     };
 
-    run_exit_phase(
-     [](BacktestRunner& runner, BacktestResults&) { runner.run_open_exits(); });
+    run_exit_phase([&](BacktestRunner& runner, BacktestResults&) {
+      runner.run_open_exits(!self.uses_intrabar_orders_);
+    });
+    const auto run_touch_exits = [&](double progress,
+                                     bool include_open = false) {
+      run_exit_phase(
+       [&](BacktestRunner& runner, BacktestResults&) {
+         runner.run_touch_exits(progress,
+                                runner.current_market_price(),
+                                self.intrabar_path_,
+                                include_open);
+       },
+       false);
+    };
+    if(self.uses_intrabar_orders_) {
+      for(const auto index : active) {
+        auto& runner = self.backtests_[index].runner();
+        self.sync_backtest(runner);
+        runner.prepare_signal_candidates(
+         results.backtests()[index].strategy_series_results(),
+         self.intrabar_path_);
+      }
+      run_touch_exits(0.0, true);
+    }
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
       return runner.discover_open_requested_order(
         result.strategy_series_results());
     });
-    run_exit_phase([&self](BacktestRunner& runner, BacktestResults&) {
-      runner.run_intrabar(self.intrabar_path_);
-    });
-    if(self.uses_calls_) {
+    if(!self.uses_intrabar_orders_) {
+      run_exit_phase([&self](BacktestRunner& runner, BacktestResults&) {
+        runner.run_intrabar(self.intrabar_path_);
+      });
+    } else {
+      const auto after_entries = [&](double progress) {
+        run_exit_phase(
+         [](BacktestRunner& runner, BacktestResults&) {
+           const auto price = runner.current_market_price();
+           runner.run_intrabar_segment(price, price);
+         },
+         false);
+        for(const auto index : active) {
+          auto& runner = self.backtests_[index].runner();
+          self.sync_backtest(runner);
+          runner.prepare_position_candidates(
+           results.backtests()[index].strategy_series_results(),
+           self.intrabar_path_,
+           progress);
+        }
+        run_touch_exits(progress);
+        run_entry_phase([&](BacktestRunner& runner, BacktestResults& result) {
+          return runner.discover_touch_requested_order(
+           result.strategy_series_results(), progress, false);
+        });
+      };
+      after_entries(0.0);
+      auto previous = 0.0;
+      while(previous < 3.0) {
+        auto progress = std::floor(previous) + 1.0;
+        for(const auto index : active) {
+          progress = self.backtests_[index].runner().next_signal_checkpoint(
+           previous, progress);
+        }
+        run_exit_phase(
+         [&](BacktestRunner& runner, BacktestResults&) {
+           runner.run_intrabar_segment(
+            runner.current_market_price(),
+            runner.price_at_progress(self.intrabar_path_, progress));
+         },
+         false);
+        for(const auto index : active) {
+          auto& runner = self.backtests_[index].runner();
+          runner.mark_bar_price(
+           runner.price_at_progress(self.intrabar_path_, progress));
+        }
+        self.refresh_unrealized();
+        self.account_.update_peak_to_current_equity();
+        if(progress < 3.0) {
+          run_touch_exits(progress);
+          run_entry_phase([&](BacktestRunner& runner, BacktestResults& result) {
+            return runner.discover_touch_requested_order(
+             result.strategy_series_results(), progress);
+          });
+          after_entries(progress);
+        }
+        previous = progress;
+      }
+    }
+    if(mark_at_open) {
       for(const auto index : active)
         self.backtests_[index].runner().mark_bar_close();
     }
@@ -327,6 +410,7 @@ private:
   std::size_t total_timestamps_{};
   bool is_failed_{};
   bool uses_calls_{};
+  bool uses_intrabar_orders_{};
 
   auto requested_order_precedes(this const PortfolioRunner& self,
                                 const RankedRequestedOrder& lhs,
@@ -394,10 +478,13 @@ private:
   }
 
   void sync_backtest(this PortfolioRunner& self,
-                     BacktestRunner& runner) noexcept
+                     BacktestRunner& runner,
+                     bool update_peak = true) noexcept
   {
     self.refresh_unrealized();
-    self.account_.update_peak_to_current_equity();
+    if(update_peak) {
+      self.account_.update_peak_to_current_equity();
+    }
     runner.portfolio_account(self.account_, self.reserved_notional());
     runner.portfolio_open_trade_capacity_available(self.open_position_count() <
                                                    self.maximum_open_trades_);

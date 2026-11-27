@@ -15,10 +15,12 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 - A numeric node returns one `double` per evaluation. Price nodes use Asset
   price units, quantity nodes use units, and fee/cost/equity nodes use the
   Portfolio currency. Percentage nodes use percentage points.
-- Nodes see only state visible in the current execution phase. For **Next
-  Open**, historical market-data and named-series expressions remain on the
-  preceding completed candle; `REQUESTED_ORDER.PRICE` is the current executable
-  open in a comparator.
+- Nodes see state from the current execution phase. Open and intrabar
+  comparators read the preceding completed candle. `REQUESTED_ORDER.PRICE`
+  gives the executable fill price. A custom Price and its Delay 0 signal can
+  use the execution Asset's completed candle when modeling an earlier touch.
+  This applies to signal entries, signal exits, and pyramiding.
+  [Signal prices and delays](execution.md#signal-prices-and-delays)
 - Indicators and lookbacks need history. Before sufficient history exists they
   can produce a non-finite value. Arithmetic generally propagates non-finite
   inputs; division by zero and square root of a negative value must not be used
@@ -65,15 +67,19 @@ the execution contract.
 | `SERIES.REFERENCE` | Named top-level series; `name` | Strategy |
 | `INPUT.NUMERIC` | Declared input; `label`, `representation`, `value` | Strategy |
 
-Comparator market fields obey Portfolio comparator visibility rules. In
-particular, Next Open ranking sees the previous completed bar; use
-`REQUESTED_ORDER.PRICE` for the executable current open. See
+Comparator market fields obey Portfolio comparator visibility rules. Open
+and intrabar ranking see the previous completed candle. Use
+`REQUESTED_ORDER.PRICE` for the executable fill price. See
 [Portfolio Backtesting](portfolio-backtesting.md).
 
 `INPUT.NUMERIC.representation` is `Decimal` (default), `SignedInteger`, or
 `UnsignedInteger`; defaults are an empty label and value `0`. A numeric JSON
 literal is shorthand for `VALUE.CONSTANT`. Parameterless methods may use their
 exact method-ID string as shorthand.
+
+When `MARKET_DATA.OPEN` or `MARKET_DATA.CLOSE` is the Price method itself,
+it selects the execution candle's corresponding event. Inside a larger
+Price expression, it supplies a numeric value to that expression.
 
 ## External Asset fields
 
@@ -83,11 +89,12 @@ exact method-ID string as shorthand.
 column names exactly.
 
 The lookup matches the exact timestamp of the candle visible to the Strategy.
-For Next Open, it uses the timestamp of the preceding completed candle. Use the
-same timestamp convention and candle schedule for the traded and reference
-Assets. An absent candle or field value returns `NaN`, which follows the
-usual expression rules. Compare the external value to a threshold with
-`COMPARISON.GREATER_THAN` if the signal should be false on a missing match.
+Open-phase expressions that read the preceding completed candle use that
+candle's timestamp. Use the same timestamp convention and candle schedule for
+the traded and reference Assets. An absent candle or field value returns
+`NaN`, which follows the usual expression rules. Compare the external value
+to a threshold with `COMPARISON.GREATER_THAN` if the signal should be false on
+a missing match.
 
 [BBCA and IHSG worked example](resources-and-workflows.md#external-asset-references)
 
